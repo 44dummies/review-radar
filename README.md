@@ -187,16 +187,16 @@ AI reviewers add text you have to read. Review Radar subtracts it, and every sco
 
 ```mermaid
 flowchart LR
-  D[git diff] --> H[hunks]
-  R[repo] --> G[import graph<br/>tree-sitter]
-  R --> Y[git history]
-  S[*.sarif] --> X[external findings]
-  H --> SIG{{9 independent signals}}
+  D["git diff"] --> H["hunks"]
+  R["repo"] --> G["import graph (tree-sitter)"]
+  R --> Y["git history"]
+  S["SARIF files"] --> X["external findings"]
+  H --> SIG{{"9 independent signals"}}
   G --> SIG
   Y --> SIG
   X --> SIG
-  SIG --> SC["score = min(100, Σ weights)"]
-  SC --> O[terminal · markdown · json · sarif]
+  SIG --> SC["score = min(100, sum of weights)"]
+  SC --> O["terminal / markdown / json / sarif"]
 ```
 
 Each signal is one small, self-contained file in [`packages/core/src/signals`](packages/core/src/signals) that returns evidence with a weight. No signal knows about any other, so adding one never changes how the rest behave.
