@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
-import { writeFileSync } from 'node:fs';
+import { realpathSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { analyze, render, FORMATS, RadarError, VERSION, type Format } from '@review-radar/core';
 
 const HELP = `Usage: review-radar [<base>..<head>] [options]
@@ -21,6 +21,16 @@ Options:
   -v, --version      Print version
   -h, --help         Print this help
 `;
+
+/** True when this file is the entry script, even when launched through npm's bin symlink (npx). */
+export function isMainModule(metaUrl: string, argv1: string | undefined): boolean {
+  if (!argv1) return false;
+  try {
+    return realpathSync(fileURLToPath(metaUrl)) === realpathSync(argv1);
+  } catch {
+    return false;
+  }
+}
 
 interface IO { stdout: (s: string) => void; stderr: (s: string) => void; cwd: string }
 
@@ -66,7 +76,7 @@ export async function main(argv: string[], io: IO): Promise<number> {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+if (isMainModule(import.meta.url, process.argv[1])) {
   main(process.argv.slice(2), {
     stdout: (s) => process.stdout.write(s), stderr: (s) => process.stderr.write(s), cwd: process.cwd(),
   }).then((code) => { process.exitCode = code; });
