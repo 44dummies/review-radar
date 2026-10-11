@@ -5,3 +5,7 @@ export * from './lang';
 export * from './diff';
 export * from './config';
 export * from './history';
+export * from './assets';
+export * from './imports/parser';
+export * from './imports/resolve';
+export * from './imports/graph';
