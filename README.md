@@ -4,7 +4,7 @@
 
 Review Radar scores every hunk of a pull request from 0–100, sorts it into **P0 must-read / P1 should-read / P2 skim**, and tells you *why* in plain sentences. It's deterministic, runs offline, and needs no API key or LLM.
 
-![Review Radar in the terminal](docs/img/terminal.png)
+![Review Radar in the terminal](.github/assets/terminal.png)
 
 AI agents now write PRs faster than humans can review them. Teams either merge code nobody really read or let PRs pile up. Review Radar doesn't add another wall of AI comments. It **removes reading**: it points you at the hunks that can hurt you and lets you skim the rest with a clear conscience.
 
@@ -27,11 +27,11 @@ jobs:
 
 You get **one** PR comment (edited on every push, never re-posted), a job summary, inline annotations on the riskiest lines, and results in GitHub code scanning (free on public repos).
 
-![Review Radar PR comment](docs/img/pr-comment.png)
+![Review Radar PR comment](.github/assets/pr-comment.png)
 
 The same findings show up inline in **Files changed** through GitHub code scanning (P0 as warnings, P1 as notes, so they never turn your PR red unless you set `fail-on`):
 
-![Review Radar alert in GitHub code scanning](docs/img/code-scanning.png)
+![Review Radar alert in GitHub code scanning](.github/assets/code-scanning.png)
 
 ### CLI
 
@@ -57,7 +57,7 @@ npx review-radar --fail-on P0    # exit 1 if anything must be read
 
 The import graph and test detection understand **TypeScript, JavaScript and Python** (via tree-sitter). Every other language still gets path, diff, git and SARIF signals.
 
-Weights, thresholds and how to tune them: [docs/signals.md](docs/signals.md).
+Default weights and how to tune them: see [Signals and weights](#signals-and-weights) below.
 
 ## Bring your scanners
 
@@ -97,6 +97,29 @@ tiers: { p0: 70, p1: 40 }
 sensitivePaths: ["ledger", "kyc"]
 ignore: ["**/generated/**", "**/*.snap"]
 ```
+
+### Signals and weights
+
+A hunk's score is `min(100, sum of its evidence weights)`. Tiers: **P0 ≥ 70**, **P1 ≥ 40**, **P2** below. Override any weight under `weights:`.
+
+<details>
+<summary>Show all signals and default weights</summary>
+
+| Signal | Weight keys (default) | Fires when |
+|---|---|---|
+| sensitive-path | `sensitivePath` (45), `sensitiveCode` (35) | path matches `sensitivePaths` (auth, session, token, jwt, oauth, passw, secret, credential, crypto, encrypt, permission, rbac, acl, payment, billing, checkout, stripe, mpesa, invoice, migrations, `.env`, `Dockerfile`, `.github/workflows`), or added lines match `sensitiveCode` (child_process, exec, eval, `new Function`, dangerouslySetInnerHTML, subprocess, os.system, pickle.loads, yaml.load, bcrypt, jwt.sign/verify, createHash/createCipher, `innerHTML =`, disabled TLS verification) |
+| blast-radius | `blastRadiusPerImporter` (3), `blastRadiusMax` (30) | other files import the changed file (TS/JS/Python import graph, cached per commit) |
+| untested-change | `untestedChange` (25) | no test imports the file or mentions the changed symbols; with `lcov`, none of the changed lines are covered |
+| test-gaming | `testGaming` (70) | in test files: test deleted, `.skip`/`xit`/`pytest.mark.skip`/`xfail` added, `.only`/`fit` added, net assertions removed, strict matcher weakened (`toBe(x)` → `toBeDefined()`) |
+| dependency-change | `dependencyManifest` (30), `dependencyMajor` (+20), `dependencyLockfile` (10) | new dependency, major bump, or lockfile change |
+| churn | `churnPerChange` (2), `churnMin` (3), `churnMax` (20) | file changed often in the last `churnDays` (90); off on shallow clones |
+| size | `sizePer10Lines` (2), `sizeMin` (20 lines), `sizeMax` (20) | large hunk |
+| diffusion | `diffusion` (10) | PR touches ≥ `diffusion.files` (10) files or ≥ `diffusion.dirs` (5) directories |
+| external-sarif | `sarifError` (40), `sarifWarning` (20), `sarifNote` (5) | a `sarif` finding lands inside a changed hunk |
+
+Default `ignore`: `dist/**`, `build/**`, `vendor/**`, `*.min.js` at any depth. Binary files are listed as skipped.
+
+</details>
 
 ## How it works
 
