@@ -1,5 +1,6 @@
 node_modules/
-dist/
+packages/*/dist/
 .reviewradar-cache/
+.superpowers/
 coverage/
 *.log
