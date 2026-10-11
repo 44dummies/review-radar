@@ -22,7 +22,13 @@
     "risk",
     "github-action",
     "llm",
-    "agents"
+    "agents",
+    "mcp",
+    "mcp-server",
+    "claude-code",
+    "claude-code-plugin",
+    "test-gaming",
+    "coding-agents"
   ],
   "repository": {
     "type": "git",

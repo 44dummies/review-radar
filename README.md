@@ -65,6 +65,8 @@ npx review-radar                    # current branch vs main
 npx review-radar main...HEAD        # PR-style range, from the merge-base
 npx review-radar --format md        # terminal | md | json | sarif
 npx review-radar --fail-on P0       # exit 1 if anything must be read
+npx review-radar --working-tree     # include uncommitted and untracked changes
+npx review-radar mcp                # MCP server (stdio) for coding agents
 ```
 
 Works in any git repo with Node 20 or newer. Nothing to configure.
@@ -79,9 +81,11 @@ Let your agent check *where a reviewer will look* before it opens the PR. It rev
 /plugin install review-radar --marketplace 44dummies/review-radar
 ```
 
-On Claude Code older than 2.1.275, run `/plugin marketplace add 44dummies/review-radar`, then `/plugin install review-radar@review-radar`.
+On Claude Code older than 2.1.275, run `/plugin marketplace add 44dummies/review-radar`, then `/plugin install review-radar@review-radar`. The plugin's MCP server needs Node 20 or newer on your `PATH`.
 
-The `review-before-pr` skill runs the review, makes the agent undo its own test gaming (skipped or weakened tests), and adds a **Where to look** section to the PR description.
+The `review-before-pr` skill runs the review, makes the agent undo its own test gaming (skipped or weakened tests), and adds a **Where to look** section to the PR description. Claude usually picks it up on its own when you ask it to get a branch ready for a PR; you can also run `/review-radar:review-before-pr`.
+
+> In our end-to-end runs, an agent's branch "passed" because it had skipped one test and loosened an exact assertion to `assert.ok`, hiding a bug where a negative discount raised the price. With the plugin installed, Claude ran the review, restored both tests, fixed the bug they hid, and re-checked before writing the PR description.
 
 **Cursor, Codex, Claude Desktop and other MCP clients:**
 
