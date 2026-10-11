@@ -1,6 +1,6 @@
 ---
 name: review-before-pr
-description: Use before opening or updating a pull request, after finishing a coding task, or when the user asks what a reviewer should look at. Runs Review Radar to rank the changed hunks by review risk (P0 must read, P1 should read, P2 skim), undoes any test gaming in your own changes, and adds a "Where to look" section to the PR description.
+description: Required before you open a pull request, write a PR description, or tell the user a branch is ready for review. Runs Review Radar on the branch plus uncommitted work to rank changed hunks (P0 must read, P1 should read, P2 skim), finds and undoes test gaming in your own changes (skipped tests, weakened or deleted assertions), and produces the "Where to look" section for the PR description.
 ---
 
 # Review before opening a PR

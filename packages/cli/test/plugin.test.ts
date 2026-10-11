@@ -28,6 +28,8 @@ describe('claude code plugin', () => {
     const desc = /^description: (.+)$/m.exec(fm)?.[1] ?? '';
     expect(desc.length).toBeGreaterThan(50);
     expect(desc.length).toBeLessThanOrEqual(1024);
+    // Directive wording auto-triggered 2/2 headless runs vs 1/2 for "Use before…" (e2e 2026-10-11)
+    expect(desc).toMatch(/^Required before you open a pull request/);
     expect(md).toContain('review_changes');
     expect(md).toContain('pr_review_guide');
   });
