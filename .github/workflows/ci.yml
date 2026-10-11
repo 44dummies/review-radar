@@ -23,6 +23,8 @@ jobs:
       - run: npm run typecheck
       - run: npx vitest run --coverage
       - run: npm run build
+      - run: node scripts/smoke-mcp.mjs dist/cli.mjs
+      - run: node scripts/smoke-mcp.mjs packages/cli/dist/cli.mjs
       - name: dist is up to date
         if: matrix.os == 'ubuntu-latest' && matrix.node == 20
         run: git diff --exit-code -- dist

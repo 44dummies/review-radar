@@ -33605,7 +33605,7 @@ function getOctokit(token, options, ...additionalPlugins) {
 
 // packages/action/src/main.ts
 import { writeFileSync as writeFileSync2 } from "node:fs";
-import { join as join5 } from "node:path";
+import { join as join6 } from "node:path";
 
 // packages/core/src/types.ts
 function tierFor(score, tiers = { p0: 70, p1: 40 }) {
@@ -33674,6 +33674,8 @@ function isTestFile(path) {
 }
 
 // packages/core/src/diff.ts
+import { readFileSync as readFileSync2 } from "node:fs";
+import { join } from "node:path";
 var HUNK_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 function range(start2, count) {
   if (count === 0) return { start: start2, end: start2 };
@@ -33788,7 +33790,32 @@ function resolveCommit(repoRoot, ref, role) {
   }
   return sha;
 }
-function getChangeSet(repoRoot, rangeArg) {
+var MAX_UNTRACKED_BYTES = 1024 * 1024;
+var LEGACY_CACHE = ".reviewradar-cache/";
+function untrackedFiles(repoRoot) {
+  const paths = git(repoRoot, ["ls-files", "--others", "--exclude-standard", "-z"]).split("\0").filter(Boolean);
+  const out2 = [];
+  for (const p of paths) {
+    if (p.startsWith(LEGACY_CACHE)) continue;
+    let buf;
+    try {
+      buf = readFileSync2(join(repoRoot, p));
+    } catch {
+      continue;
+    }
+    out2.push(`diff --git a/${p} b/${p}`, "new file mode 100644");
+    if (buf.length > MAX_UNTRACKED_BYTES || buf.subarray(0, 8e3).includes(0)) {
+      out2.push(`Binary files /dev/null and b/${p} differ`);
+      continue;
+    }
+    const lines = buf.toString("utf8").replace(/\r\n/g, "\n").split("\n");
+    if (lines.at(-1) === "") lines.pop();
+    out2.push("--- /dev/null", `+++ b/${p}`);
+    if (lines.length) out2.push(`@@ -0,0 +1,${lines.length} @@`, ...lines.map((l) => `+${l}`));
+  }
+  return parseUnifiedDiff(out2.join("\n") + "\n");
+}
+function getChangeSet(repoRoot, rangeArg, opts = {}) {
   if (!tryGit(repoRoot, ["rev-parse", "--is-inside-work-tree"])) {
     throw new RadarError("NOT_A_REPO", `${repoRoot} is not inside a git repository.`);
   }
@@ -33812,6 +33839,10 @@ function getChangeSet(repoRoot, rangeArg) {
     if (!mb) throw new RadarError("BASE_NOT_FOUND", `No merge-base between ${branch} and HEAD. In GitHub Actions use actions/checkout with fetch-depth: 0.`);
     base = mb;
   }
+  if (!rangeArg && opts.workingTree) {
+    const text2 = git(repoRoot, ["diff", "--no-color", "--no-ext-diff", "-U0", "-M", base]);
+    return { base, head, files: [...parseUnifiedDiff(text2), ...untrackedFiles(repoRoot)] };
+  }
   const text = git(repoRoot, ["diff", "--no-color", "--no-ext-diff", "-U0", "-M", base, head]);
   return { base, head, files: parseUnifiedDiff(text) };
 }
@@ -33819,8 +33850,8 @@ function getChangeSet(repoRoot, rangeArg) {
 // packages/core/src/config.ts
 var import_yaml = __toESM(require_dist(), 1);
 var import_picomatch = __toESM(require_picomatch2(), 1);
-import { existsSync as existsSync3, readFileSync as readFileSync2 } from "node:fs";
-import { join, isAbsolute } from "node:path";
+import { existsSync as existsSync3, readFileSync as readFileSync3 } from "node:fs";
+import { join as join2, isAbsolute } from "node:path";
 var DEFAULT_CONFIG = {
   weights: {
     sensitivePath: 45,
@@ -33892,14 +33923,14 @@ var DEFAULT_CONFIG = {
   diffusion: { files: 10, dirs: 5 }
 };
 function loadConfig(repoRoot, configPath) {
-  const p = configPath ? isAbsolute(configPath) ? configPath : join(repoRoot, configPath) : join(repoRoot, ".reviewradar.yml");
+  const p = configPath ? isAbsolute(configPath) ? configPath : join2(repoRoot, configPath) : join2(repoRoot, ".reviewradar.yml");
   if (!existsSync3(p)) {
     if (configPath) throw new RadarError("BAD_INPUT", `Config file not found: ${configPath}`);
     return structuredClone(DEFAULT_CONFIG);
   }
   let raw;
   try {
-    raw = (0, import_yaml.parse)(readFileSync2(p, "utf8")) ?? {};
+    raw = (0, import_yaml.parse)(readFileSync3(p, "utf8")) ?? {};
   } catch (e) {
     throw new RadarError("BAD_INPUT", `Invalid YAML in ${p}: ${e.message}`);
   }
@@ -33959,16 +33990,16 @@ function detectAiAuthorship(repoRoot, base, head) {
 // packages/core/src/assets.ts
 import { existsSync as existsSync4 } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join as join2 } from "node:path";
+import { dirname, join as join3 } from "node:path";
 import { fileURLToPath } from "node:url";
 var here = dirname(fileURLToPath(import.meta.url));
 var require2 = createRequire(import.meta.url);
 function resolveAsset(file) {
   const candidates = [
-    process.env.REVIEW_RADAR_ASSETS && join2(process.env.REVIEW_RADAR_ASSETS, file),
-    join2(here, "grammars", file),
+    process.env.REVIEW_RADAR_ASSETS && join3(process.env.REVIEW_RADAR_ASSETS, file),
+    join3(here, "grammars", file),
     // bundled: dist/grammars next to the .mjs
-    join2(here, "..", "grammars", file)
+    join3(here, "..", "grammars", file)
     // source: packages/core/grammars
   ].filter(Boolean);
   for (const c of candidates) if (existsSync4(c)) return c;
@@ -38124,8 +38155,8 @@ function resolveSpecifier(fromFile, spec, lang, exists2) {
 }
 
 // packages/core/src/imports/graph.ts
-import { existsSync as existsSync5, mkdirSync, readFileSync as readFileSync3, writeFileSync } from "node:fs";
-import { join as join3 } from "node:path";
+import { existsSync as existsSync5, mkdirSync, readFileSync as readFileSync4, writeFileSync } from "node:fs";
+import { isAbsolute as isAbsolute2, join as join4 } from "node:path";
 function fromEdges(edges) {
   const reverse = /* @__PURE__ */ new Map();
   for (const [from, tos] of Object.entries(edges)) {
@@ -38139,10 +38170,11 @@ function fromEdges(edges) {
 }
 async function buildImportGraph(repoRoot, head, opts = {}) {
   const useCache = opts.useCache ?? true;
-  const cacheDir = join3(repoRoot, ".reviewradar-cache");
-  const cacheFile = join3(cacheDir, `graph-${head}.json`);
+  const gitPath = git(repoRoot, ["rev-parse", "--git-path", "review-radar"]).trim();
+  const cacheDir = isAbsolute2(gitPath) ? gitPath : join4(repoRoot, gitPath);
+  const cacheFile = join4(cacheDir, `graph-${head}.json`);
   if (useCache && existsSync5(cacheFile)) {
-    return fromEdges(JSON.parse(readFileSync3(cacheFile, "utf8")));
+    return fromEdges(JSON.parse(readFileSync4(cacheFile, "utf8")));
   }
   const tracked = git(repoRoot, ["ls-files", "-z"]).split("\0").filter(Boolean);
   const all = new Set(tracked);
@@ -38152,7 +38184,7 @@ async function buildImportGraph(repoRoot, head, opts = {}) {
     const lang = languageOf(file);
     let text;
     try {
-      text = readFileSync3(join3(repoRoot, file), "utf8");
+      text = readFileSync4(join4(repoRoot, file), "utf8");
     } catch {
       continue;
     }
@@ -38624,19 +38656,19 @@ function summarize(risks, skippedFiles) {
 }
 
 // packages/core/src/analyze.ts
-import { existsSync as existsSync6, readFileSync as readFileSync4 } from "node:fs";
-import { isAbsolute as isAbsolute2, join as join4 } from "node:path";
+import { existsSync as existsSync6, readFileSync as readFileSync5 } from "node:fs";
+import { isAbsolute as isAbsolute3, join as join5 } from "node:path";
 var VERSION7 = "1.0.2";
-var abs = (root, p) => isAbsolute2(p) ? p : join4(root, p);
+var abs = (root, p) => isAbsolute3(p) ? p : join5(root, p);
 function readInput(root, p, kind) {
   const full = abs(root, p);
   if (!existsSync6(full)) throw new RadarError("BAD_INPUT", `${kind} file not found: ${p}`);
-  return readFileSync4(full, "utf8");
+  return readFileSync5(full, "utf8");
 }
 async function analyze(opts) {
   const { repoRoot } = opts;
   const config = loadConfig(repoRoot, opts.configPath);
-  const raw = getChangeSet(repoRoot, opts.range);
+  const raw = getChangeSet(repoRoot, opts.range, { workingTree: opts.workingTree });
   const warnings = [];
   const skippedFiles = raw.files.filter((f) => f.binary && !isIgnored(f.path, config)).map((f) => f.path);
   const changeSet = { ...raw, files: raw.files.filter((f) => !f.binary && !isIgnored(f.path, config)) };
@@ -38665,10 +38697,11 @@ async function analyze(opts) {
     sarif,
     lcov,
     config,
-    testFiles: tracked.filter(isTestFile),
+    // newly added files (untracked in working-tree mode) can be tests too
+    testFiles: [.../* @__PURE__ */ new Set([...tracked, ...changeSet.files.filter((f) => f.status === "added").map((f) => f.path)])].filter(isTestFile),
     readFile: (p) => {
       try {
-        return readFileSync4(join4(repoRoot, p), "utf8");
+        return readFileSync5(join5(repoRoot, p), "utf8");
       } catch {
         return void 0;
       }
@@ -38793,7 +38826,7 @@ async function run2() {
   for (const a of topAnnotations(map)) {
     error(a.message, { file: a.file, startLine: a.startLine, endLine: a.endLine, title: a.title });
   }
-  const sarifFile = join5(process.env.RUNNER_TEMP ?? workspace, "review-radar.sarif");
+  const sarifFile = join6(process.env.RUNNER_TEMP ?? workspace, "review-radar.sarif");
   writeFileSync2(sarifFile, renderSarif(map));
   setOutput("sarif-file", sarifFile);
   setOutput("p0", String(map.summary.p0));

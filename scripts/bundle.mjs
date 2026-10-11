@@ -9,6 +9,7 @@ const root = join(import.meta.dirname, '..');
 const targets = [
   { entry: 'packages/cli/src/cli.ts', outfile: 'packages/cli/dist/cli.mjs' },
   { entry: 'packages/action/src/main.ts', outfile: 'dist/index.mjs' },
+  { entry: 'packages/cli/src/cli.ts', outfile: 'dist/cli.mjs' }, // used by the Claude Code plugin
 ];
 const only = process.argv[2];
 

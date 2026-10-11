@@ -9,7 +9,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p .",
     "grammars": "node scripts/fetch-grammars.mjs",
-    "build": "node scripts/bundle.mjs"
+    "build": "node scripts/bundle.mjs",
+    "smoke:mcp": "node scripts/smoke-mcp.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
