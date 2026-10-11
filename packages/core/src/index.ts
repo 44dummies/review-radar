@@ -11,3 +11,4 @@ export * from './imports/resolve';
 export * from './imports/graph';
 export * from './symbols';
 export * from './lcov';
+export * from './sarif-input';
