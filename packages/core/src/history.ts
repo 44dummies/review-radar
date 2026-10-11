@@ -13,9 +13,12 @@ export function buildGitHistory(repoRoot: string, head: string, days: number): G
 }
 
 const AGENT_NAMES = 'Claude|Copilot|Cursor|Codex|Devin|Aider|Gemini|Jules|Windsurf|Cline|OpenHands|Sweep|Amp';
-const TRAILER_RE = new RegExp(`^Co-Authored-By:\\s*(.*(?:${AGENT_NAMES}).*)$`, 'im');
+// Whole words only: "Champion" must not match "Amp", "Claude Monet" is a person.
+const AGENT_WORD = new RegExp(`\\b(?:${AGENT_NAMES})\\b`, 'i');
+const TRAILER_RE = /^Co-Authored-By:\s*(.*)$/gim;
 const FOOTER_RE = /Generated with \[?(Claude Code|Cursor|Codex|Aider)/i;
-const BOT_RE = new RegExp(`(\\[bot\\]|${AGENT_NAMES})`, 'i');
+/** A commit author counts only when it is a bot account that names an AI agent (dependabot[bot] is not AI). */
+const isAgentBot = (name: string) => /\[bot\]/i.test(name) && AGENT_WORD.test(name);
 
 export function detectAiAuthorship(repoRoot: string, base: string, head: string): AiAuthorship {
   const out = tryGit(repoRoot, ['log', '--format=%an%x1f%ae%x1f%B%x1e', `${base}..${head}`]) ?? '';
@@ -23,9 +26,10 @@ export function detectAiAuthorship(repoRoot: string, base: string, head: string)
   for (const rec of out.split('\x1e')) {
     const [name = '', , body = ''] = rec.trim().split('\x1f');
     if (!name) continue;
-    if (BOT_RE.test(name)) reasons.add(`commit author ${name}`);
-    const t = TRAILER_RE.exec(body);
-    if (t) reasons.add(`Co-Authored-By: ${t[1]!.trim()}`);
+    if (isAgentBot(name)) reasons.add(`commit author ${name}`);
+    for (const t of body.matchAll(TRAILER_RE)) {
+      if (AGENT_WORD.test(t[1]!)) reasons.add(`Co-Authored-By: ${t[1]!.trim()}`);
+    }
     const f = FOOTER_RE.exec(body);
     if (f) reasons.add(`"Generated with ${f[1]}" footer`);
   }

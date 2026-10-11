@@ -46,6 +46,19 @@ describe('detectAiAuthorship', () => {
     expect(ai.reasons.join(' ')).toMatch(/copilot-swe-agent\[bot\]/);
   });
 
+  it('does not label humans whose names contain agent words, or non-AI bots, as AI', () => {
+    const r = makeRepo();
+    r.write({ 'a.ts': '1\n' });
+    const base = r.commit('init');
+    r.write({ 'a.ts': '2\n' });
+    r.commit('a', { author: 'Claude Monet', email: 'claude@example.com' });
+    r.write({ 'a.ts': '3\n' });
+    r.commit('b\n\nCo-Authored-By: Jane Champion <jane@example.com>', { author: 'Champion', email: 'c@example.com' });
+    r.write({ 'a.ts': '4\n' });
+    const head = r.commit('bump deps', { author: 'dependabot[bot]', email: 'bot@users.noreply.github.com' });
+    expect(detectAiAuthorship(r.root, base, head)).toEqual({ likely: false, reasons: [] });
+  });
+
   it('is not likely for plain human commits', () => {
     const r = makeRepo();
     r.write({ 'a.ts': '1\n' });

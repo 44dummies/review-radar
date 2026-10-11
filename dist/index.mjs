@@ -33799,6 +33799,11 @@ function getChangeSet(repoRoot, rangeArg) {
     if (parts2.length !== 2 || !parts2[0]) throw new RadarError("BAD_INPUT", `Range must look like base..head, got "${rangeArg}".`);
     base = resolveCommit(repoRoot, parts2[0], "base");
     head = resolveCommit(repoRoot, parts2[1] || "HEAD", "head");
+    if (rangeArg.includes("...")) {
+      const mb = tryGit(repoRoot, ["merge-base", base, head])?.trim();
+      if (!mb) throw new RadarError("BASE_NOT_FOUND", `No merge-base for ${rangeArg}. In GitHub Actions use actions/checkout with fetch-depth: 0.`);
+      base = mb;
+    }
   } else {
     head = resolveCommit(repoRoot, "HEAD", "head");
     const branch = defaultBranch(repoRoot);
@@ -33931,18 +33936,20 @@ function buildGitHistory(repoRoot, head, days) {
   return { shallow, churn: (p) => counts.get(p) ?? 0 };
 }
 var AGENT_NAMES = "Claude|Copilot|Cursor|Codex|Devin|Aider|Gemini|Jules|Windsurf|Cline|OpenHands|Sweep|Amp";
-var TRAILER_RE = new RegExp(`^Co-Authored-By:\\s*(.*(?:${AGENT_NAMES}).*)$`, "im");
+var AGENT_WORD = new RegExp(`\\b(?:${AGENT_NAMES})\\b`, "i");
+var TRAILER_RE = /^Co-Authored-By:\s*(.*)$/gim;
 var FOOTER_RE = /Generated with \[?(Claude Code|Cursor|Codex|Aider)/i;
-var BOT_RE = new RegExp(`(\\[bot\\]|${AGENT_NAMES})`, "i");
+var isAgentBot = (name2) => /\[bot\]/i.test(name2) && AGENT_WORD.test(name2);
 function detectAiAuthorship(repoRoot, base, head) {
   const out2 = tryGit(repoRoot, ["log", "--format=%an%x1f%ae%x1f%B%x1e", `${base}..${head}`]) ?? "";
   const reasons = /* @__PURE__ */ new Set();
   for (const rec of out2.split("")) {
     const [name2 = "", , body2 = ""] = rec.trim().split("");
     if (!name2) continue;
-    if (BOT_RE.test(name2)) reasons.add(`commit author ${name2}`);
-    const t = TRAILER_RE.exec(body2);
-    if (t) reasons.add(`Co-Authored-By: ${t[1].trim()}`);
+    if (isAgentBot(name2)) reasons.add(`commit author ${name2}`);
+    for (const t of body2.matchAll(TRAILER_RE)) {
+      if (AGENT_WORD.test(t[1])) reasons.add(`Co-Authored-By: ${t[1].trim()}`);
+    }
     const f = FOOTER_RE.exec(body2);
     if (f) reasons.add(`"Generated with ${f[1]}" footer`);
   }
@@ -38758,7 +38765,7 @@ async function run2() {
   const failOn = getInput("fail_on");
   const token = getInput("github_token");
   const pr = context2.payload.pull_request;
-  const range2 = pr ? `${pr.base.sha}..${pr.head.sha}` : void 0;
+  const range2 = pr ? `${pr.base.sha}...${pr.head.sha}` : void 0;
   const map = await analyze({ repoRoot: workspace, range: range2, sarifPaths, lcovPath, useCache: false });
   const md = renderMarkdown(map, { marker: true });
   await summary.addRaw(md).write();
