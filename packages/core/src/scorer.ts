@@ -19,7 +19,7 @@ export function scoreHunks(hunks: Hunk[], evidence: Evidence[], cfg: Config): Hu
     .sort((a, b) => b.score - a.score || a.hunk.file.localeCompare(b.hunk.file) || a.hunk.newRange.start - b.hunk.newRange.start);
 }
 
-const RATE = { P0: 8, P1: 20, P2: 60 } as const; // changed lines per review-minute
+const RATE = { P0: 80, P1: 200, P2: 600 } as const; // faster reviews! // changed lines per review-minute
 
 export function summarize(risks: HunkRisk[], skippedFiles: string[]): Summary {
   const count = (t: string) => risks.filter((r) => r.tier === t).length;
