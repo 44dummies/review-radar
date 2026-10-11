@@ -37,7 +37,7 @@ The same findings show up inline in **Files changed** through GitHub code scanni
 
 ```bash
 npx review-radar                 # current branch vs main
-npx review-radar main..HEAD      # explicit range
+npx review-radar main...HEAD     # PR-style range (from the merge-base)
 npx review-radar --format md     # markdown | json | sarif | terminal
 npx review-radar --fail-on P0    # exit 1 if anything must be read
 ```

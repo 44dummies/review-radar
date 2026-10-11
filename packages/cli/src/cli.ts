@@ -5,9 +5,11 @@ import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyze, render, FORMATS, RadarError, VERSION, type Format } from '@review-radar/core';
 
-const HELP = `Usage: review-radar [<base>..<head>] [options]
+const HELP = `Usage: review-radar [<base>...<head>] [options]
 
 Shows which hunks of a change need human review, and why.
+With no range: current branch vs the merge-base with main. base...head diffs from
+the merge-base (like a PR); base..head is a direct diff.
 
 Options:
   --sarif <file>     Merge findings from another scanner (repeatable)

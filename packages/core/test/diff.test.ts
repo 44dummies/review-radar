@@ -88,6 +88,21 @@ describe('getChangeSet', () => {
     expect(cs.files.map((f) => f.path)).toEqual(['src/a.ts']);
   });
 
+  it('three-dot base...head diffs from the merge-base (PR semantics), ignoring later base commits', () => {
+    const r = makeRepo();
+    r.write({ 'a.ts': '1\n' });
+    r.commit('init');
+    r.git('checkout', '-q', '-b', 'feature');
+    r.write({ 'feat.ts': 'x\n' });
+    const head = r.commit('feat');
+    r.git('checkout', '-q', 'main');
+    r.write({ 'main-only.ts': 'y\n' });
+    const base = r.commit('main moves on');
+    expect(getChangeSet(r.root, `${base}...${head}`).files.map((f) => f.path)).toEqual(['feat.ts']);
+    // two-dot keeps git's direct-diff meaning
+    expect(getChangeSet(r.root, `${base}..${head}`).files.map((f) => f.path).sort()).toEqual(['feat.ts', 'main-only.ts']);
+  });
+
   it('defaults to merge-base with main', () => {
     const r = makeRepo();
     r.write({ 'a.ts': '1\n' });

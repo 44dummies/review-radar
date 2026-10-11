@@ -13,7 +13,7 @@ async function run(): Promise<void> {
   const token = core.getInput('github_token');
   const pr = github.context.payload.pull_request as { number: number; base: { sha: string }; head: { sha: string } } | undefined;
 
-  const range = pr ? `${pr.base.sha}..${pr.head.sha}` : undefined;
+  const range = pr ? `${pr.base.sha}...${pr.head.sha}` : undefined; // three-dot: diff from merge-base (PR semantics)
   const map = await analyze({ repoRoot: workspace, range, sarifPaths, lcovPath, useCache: false });
   const md = renderMarkdown(map, { marker: true });
 

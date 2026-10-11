@@ -121,6 +121,12 @@ export function getChangeSet(repoRoot: string, rangeArg?: string): ChangeSet {
     if (parts.length !== 2 || !parts[0]) throw new RadarError('BAD_INPUT', `Range must look like base..head, got "${rangeArg}".`);
     base = resolveCommit(repoRoot, parts[0], 'base');
     head = resolveCommit(repoRoot, parts[1] || 'HEAD', 'head');
+    if (rangeArg.includes('...')) {
+      // git's A...B: diff from the merge-base, so later commits on A don't show up as reversed changes
+      const mb = tryGit(repoRoot, ['merge-base', base, head])?.trim();
+      if (!mb) throw new RadarError('BASE_NOT_FOUND', `No merge-base for ${rangeArg}. In GitHub Actions use actions/checkout with fetch-depth: 0.`);
+      base = mb;
+    }
   } else {
     head = resolveCommit(repoRoot, 'HEAD', 'head');
     const branch = defaultBranch(repoRoot);
