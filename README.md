@@ -1,19 +1,49 @@
-# 📡 Review Radar
+<div align="center">
 
-**Which lines of this AI-written PR do I actually need to read?**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/logo-light.svg">
+  <img alt="Review Radar" src=".github/assets/logo-light.svg" width="440">
+</picture>
 
-Review Radar scores every hunk of a pull request from 0–100, sorts it into **P0 must-read / P1 should-read / P2 skim**, and tells you *why* in plain sentences. It's deterministic, runs offline, and needs no API key or LLM.
+### Which lines of this AI-written PR do I actually need to read?
 
-![Review Radar in the terminal](.github/assets/terminal.png)
+[![npm](https://img.shields.io/npm/v/review-radar?color=2da44e&label=npm)](https://www.npmjs.com/package/review-radar)
+[![CI](https://github.com/44dummies/review-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/44dummies/review-radar/actions/workflows/ci.yml)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Review%20Radar-2da44e?logo=github)](https://github.com/marketplace/actions/review-radar-pr-heatmap)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![No LLM](https://img.shields.io/badge/LLM-none-8b949e)
 
-AI agents now write PRs faster than humans can review them. Teams either merge code nobody really read or let PRs pile up. Review Radar doesn't add another wall of AI comments. It **removes reading**: it points you at the hunks that can hurt you and lets you skim the rest with a clear conscience.
+[**Quick start**](#-quick-start) · [**What it catches**](#-what-it-catches) · [**Configure**](#-configure) · [**How it works**](#-how-it-works) · [**Roadmap**](#-roadmap)
 
-## Install
+</div>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/demo.svg" alt="Review Radar ranking the hunks of an AI-written pull request" width="100%">
+</p>
+<p align="center"><sub><i>An agent "fixed" failing checkout tests by skipping one and weakening another, and slipped in a 24-hour session grace period. Review Radar puts all three at the top.</i></sub></p>
+
+<br>
+
+AI agents write pull requests faster than anyone can read them, so teams either merge code nobody really read or let PRs pile up. **Review Radar doesn't add another wall of AI comments. It removes reading.** It scores every hunk of a PR from 0 to 100, sorts them into **P0 must-read**, **P1 should-read** and **P2 skim**, and says *why* in plain sentences, so you can spend your attention where it can hurt you.
+
+- 🎯 **Ranks every hunk**, not every file, with evidence you can check in seconds
+- 🧪 **Catches test gaming**: skipped tests, `.only`, deleted tests, removed or weakened assertions
+- 🕸️ **Knows the blast radius** from a tree-sitter import graph (TypeScript, JavaScript, Python)
+- 🔐 **Flags sensitive code**: auth, payments, migrations, CI workflows, `eval`, `child_process`, disabled TLS…
+- 🔌 **Plays with your scanners**: takes SARIF from Semgrep, CodeQL or noskip, and emits SARIF for GitHub code scanning
+- 🤖 **Labels likely AI-authored PRs** from agent trailers and bot authors
+- 🔒 **Deterministic and offline**: no LLM, no API key, your code never leaves the runner, and the same diff always gets the same scores
+
+## 🚀 Quick start
 
 ### GitHub Action
 
 ```yaml
 # .github/workflows/review-radar.yml
+name: review-radar
 on: pull_request
 permissions: { contents: read, pull-requests: write, security-events: write }
 jobs:
@@ -21,74 +51,97 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 0 }
+        with: { fetch-depth: 0 }   # full history for churn and merge-base
       - uses: 44dummies/review-radar@v1
 ```
 
-You get **one** PR comment (edited on every push, never re-posted), a job summary, inline annotations on the riskiest lines, and results in GitHub code scanning (free on public repos).
-
-![Review Radar PR comment](.github/assets/pr-comment.png)
-
-The same findings show up inline in **Files changed** through GitHub code scanning (P0 as warnings, P1 as notes, so they never turn your PR red unless you set `fail-on`):
-
-![Review Radar alert in GitHub code scanning](.github/assets/code-scanning.png)
+That's it. Every PR gets **one** comment (edited on each push, never re-posted), a job summary, inline annotations on the riskiest lines, and alerts in GitHub code scanning (free on public repos).
 
 ### CLI
 
 ```bash
-npx review-radar                 # current branch vs main
-npx review-radar main...HEAD     # PR-style range (from the merge-base)
-npx review-radar --format md     # markdown | json | sarif | terminal
-npx review-radar --fail-on P0    # exit 1 if anything must be read
+npx review-radar                    # current branch vs main
+npx review-radar main...HEAD        # PR-style range, from the merge-base
+npx review-radar --format md        # terminal | md | json | sarif
+npx review-radar --fail-on P0       # exit 1 if anything must be read
 ```
 
-## What it looks at
+Works in any git repo with Node 20 or newer. Nothing to configure.
+
+## 👀 What you get on a PR
+
+<table>
+<tr>
+<td width="55%" valign="top">
+
+**A sticky PR comment** with the ranked hunks and the reason behind each score.
+
+<img src=".github/assets/pr-comment.png" alt="Review Radar PR comment">
+
+</td>
+<td width="45%" valign="top">
+
+**Inline alerts** in *Files changed* through code scanning. P0 shows as a warning and P1 as a note, so your PR never turns red unless you set `fail-on`.
+
+<img src=".github/assets/code-scanning.png" alt="Review Radar alert in GitHub code scanning">
+
+</td>
+</tr>
+</table>
+
+## 🔎 What it catches
 
 | Signal | Example evidence |
 |---|---|
+| **test-gaming** | skips a test (`.skip`/`xit`/`pytest.mark.skip`) · replaces a strict assertion with a weaker one |
 | **sensitive-path** | path `src/auth/session.ts` matches sensitive pattern `auth` · adds code matching `child_process` |
 | **blast-radius** | 14 files import `src/core.ts` (e.g. src/api.ts, src/cli.ts, …) |
 | **untested-change** | 32 changed lines in `pay.ts`; no test file imports it or mentions `charge` |
-| **test-gaming** | skips a test (`.skip`/`xit`/`pytest.mark.skip`) · replaces a strict assertion with a weaker one |
 | **dependency-change** | adds dependency `left-pad@^1.3.0` · bumps `react` 18 → 19 (major) |
 | **churn** | file changed 7 times in the last 90 days |
 | **size / diffusion** | hunk changes 64 lines · PR touches 23 files across 9 directories |
 | **external-sarif** | Semgrep js.sqli: SQL injection |
 
-The import graph and test detection understand **TypeScript, JavaScript and Python** (via tree-sitter). Every other language still gets path, diff, git and SARIF signals.
+The import graph and test detection understand **TypeScript, JavaScript and Python**. Every other language still gets the path, diff, git and SARIF signals.
 
-Default weights and how to tune them: see [Signals and weights](#signals-and-weights) below.
+### Bring your scanners
 
-## Bring your scanners
-
-Review Radar merges in any SARIF 2.1.0 file, from tools like Semgrep, CodeQL, [noskip](https://github.com/DariusHQ/noskip) and [open-code-review](https://github.com/alibaba/open-code-review). A finding that lands inside a changed hunk raises that hunk's score, so your existing tools decide *what's* wrong and Review Radar decides *where to look first*.
+Review Radar merges any SARIF 2.1.0 file, from tools like Semgrep, CodeQL, [noskip](https://github.com/DariusHQ/noskip) and [open-code-review](https://github.com/alibaba/open-code-review). A finding inside a changed hunk raises that hunk's score. Your existing tools decide *what's* wrong; Review Radar decides *where to look first*.
 
 ```yaml
 - uses: 44dummies/review-radar@v1
   with:
     sarif: semgrep.sarif,noskip.sarif
-    lcov: coverage/lcov.info      # optional: real line coverage for untested-change
-    fail-on: P0                   # optional: block merges until P0s are reviewed
+    lcov: coverage/lcov.info      # real line coverage for untested-change
+    fail-on: P0                   # block merges until P0s are reviewed
 ```
 
-## AI-authorship badge
+<details>
+<summary><b>All Action inputs and outputs</b></summary>
 
-When commits carry agent trailers (`Co-Authored-By: Claude`, Copilot, Cursor, Codex, Devin…), bot authors, or "Generated with" footers, the comment is labelled **🤖 Likely AI-authored**. Contribution guides ask for this disclosure, and it's often skipped.
-
-## Why not just an AI reviewer?
-
-AI reviewers add text you have to read. Review Radar subtracts it, and every score comes with evidence you can check in seconds. **Use both:** point your AI reviewer at the P0s.
-
-| | AI review bots | Review Radar |
+| Input | Default | What it does |
 |---|---|---|
-| Output | More comments | A ranked reading list |
-| Reproducible | No (sampling) | Yes (same diff → same scores) |
-| Needs API key / sends code out | Usually | Never |
-| Cost per PR | Tokens | Free |
+| `sarif` | | Comma-separated SARIF files from other scanners |
+| `lcov` | | Path to an LCOV coverage report |
+| `fail-on` | | Fail the job if any hunk is at or above `P0` or `P1` |
+| `upload-sarif` | `true` | Upload results to GitHub code scanning |
+| `github-token` | `github.token` | Token used to post the PR comment |
 
-## Configure
+| Output | What it holds |
+|---|---|
+| `sarif-file` | Path to the generated SARIF file |
+| `p0` | Number of P0 hunks |
+| `p1` | Number of P1 hunks |
 
-Add a `.reviewradar.yml` to your repo root. Every key is optional:
+</details>
+
+### AI-authorship badge
+
+When commits carry agent trailers (`Co-Authored-By: Claude`, Copilot, Cursor, Codex, Devin…), bot authors, or "Generated with" footers, the comment is labelled **🤖 Likely AI-authored**. Contribution guides ask for this disclosure, and it often gets skipped.
+
+## 🔧 Configure
+
+Every key is optional. Add a `.reviewradar.yml` to your repo root:
 
 ```yaml
 weights:
@@ -98,12 +151,10 @@ sensitivePaths: ["ledger", "kyc"]
 ignore: ["**/generated/**", "**/*.snap"]
 ```
 
-### Signals and weights
-
-A hunk's score is `min(100, sum of its evidence weights)`. Tiers: **P0 ≥ 70**, **P1 ≥ 40**, **P2** below. Override any weight under `weights:`.
+A hunk's score is `min(100, sum of its evidence weights)`. Tiers: **P0 ≥ 70**, **P1 ≥ 40**, **P2** below.
 
 <details>
-<summary>Show all signals and default weights</summary>
+<summary><b>All signals and default weights</b></summary>
 
 | Signal | Weight keys (default) | Fires when |
 |---|---|---|
@@ -121,22 +172,65 @@ Default `ignore`: `dist/**`, `build/**`, `vendor/**`, `*.min.js` at any depth. B
 
 </details>
 
-## How it works
+## 🤔 Why not just an AI reviewer?
 
+AI reviewers add text you have to read. Review Radar subtracts it, and every score comes with evidence you can verify. **Use both:** point your AI reviewer at the P0s.
+
+| | AI review bots | Review Radar |
+|---|---|---|
+| Output | More comments | A ranked reading list |
+| Reproducible | No (sampling) | Yes (same diff → same scores) |
+| Needs an API key / sends code out | Usually | Never |
+| Cost per PR | Tokens | Free |
+
+## 🧠 How it works
+
+```mermaid
+flowchart LR
+  D[git diff] --> H[hunks]
+  R[repo] --> G[import graph<br/>tree-sitter]
+  R --> Y[git history]
+  S[*.sarif] --> X[external findings]
+  H --> SIG{{9 independent signals}}
+  G --> SIG
+  Y --> SIG
+  X --> SIG
+  SIG --> SC["score = min(100, Σ weights)"]
+  SC --> O[terminal · markdown · json · sarif]
 ```
-git diff ──▶ hunks ──▶ signals (9, independent) ──▶ score = min(100, Σ weights) ──▶ terminal · md · json · sarif
-repo     ──▶ import graph (tree-sitter) · git history
-*.sarif  ──▶ external findings
+
+Each signal is one small, self-contained file in [`packages/core/src/signals`](packages/core/src/signals) that returns evidence with a weight. No signal knows about any other, so adding one never changes how the rest behave.
+
+## 🧭 Roadmap
+
+- [x] CLI + GitHub Action, 9 signals, SARIF in and out
+- [ ] **MCP server + Claude Code / Codex skill**, so agents see where a reviewer will look *before* they open the PR
+- [ ] More import-graph languages: Go, Java, Rust
+- [ ] Co-change coupling from git history
+- [ ] Optional LLM explainer for P0 hunks only
+
+## 🤝 Contributing
+
+Contributions are very welcome, and a new signal is the best first PR (Go imports, Terraform IAM changes, Rust `unsafe`…). Copy any file in `packages/core/src/signals`, add a test next to the existing ones, and open a PR.
+
+```bash
+git clone https://github.com/44dummies/review-radar && cd review-radar
+npm install
+npm test          # vitest
+npm run build     # bundles the CLI and the Action
 ```
 
-Each signal is one small file in [`packages/core/src/signals`](packages/core/src/signals). Adding one (Go imports, Terraform IAM, Rust `unsafe`…) is a great first PR.
+Found a false positive? [Open an issue](https://github.com/44dummies/review-radar/issues/new) with the hunk and the evidence line. Those get fixed fast.
 
-## Roadmap
+## ⭐ Star history
 
-- **v1.1**: MCP server + Claude Code / Codex skill, so agents can see where reviewers will look *before* opening the PR
-- **v1.2**: optional LLM explainer for P0 hunks
-- More languages for the import graph (community signals welcome)
+<a href="https://star-history.com/#44dummies/review-radar&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=44dummies/review-radar&type=Date&theme=dark">
+    <img alt="Star history chart" src="https://api.star-history.com/svg?repos=44dummies/review-radar&type=Date" width="600">
+  </picture>
+</a>
 
 ## License
 
-MIT
+[MIT](LICENSE)

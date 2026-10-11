@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="976" height="580" viewBox="0 0 976 580" role="img" aria-label="Review Radar terminal output">
+  <rect width="976" height="580" rx="12" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="975" height="579" rx="11.5" fill="none" stroke="#30363d"/>
+  <circle cx="24" cy="22" r="6" fill="#ff5f57"/><circle cx="44" cy="22" r="6" fill="#febc2e"/><circle cx="64" cy="22" r="6" fill="#28c840"/>
+  <g font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="14">
+  <text x="24" y="70" xml:space="preserve"><tspan fill="#7ee787">$</tspan><tspan fill="#e6edf3"> npx review-radar main...agent/fix-checkout</tspan></text>
+  <text x="24" y="91" xml:space="preserve"></text>
+  <text x="24" y="112" xml:space="preserve"><tspan fill="#d2a8ff">AI-authored (likely): Co-Authored-By: Claude &lt;noreply@anthropic.com&gt;</tspan></text>
+  <text x="24" y="133" xml:space="preserve"></text>
+  <text x="24" y="154" xml:space="preserve"><tspan fill="#ff7b72">P0  100</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">██████████</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">test/checkout.test.ts:6-6</tspan></text>
+  <text x="24" y="175" xml:space="preserve"><tspan fill="#e6edf3">    • path `test/checkout.test.ts` matches sensitive pattern `checkout` (+45)</tspan></text>
+  <text x="24" y="196" xml:space="preserve"><tspan fill="#e6edf3">    • replaces a strict assertion with a weaker one (e.g. `toBe(x)` → `toBeDefined()`) (+70)</tspan></text>
+  <text x="24" y="217" xml:space="preserve"><tspan fill="#ff7b72">P0  100</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">██████████</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">test/checkout.test.ts:9-9</tspan></text>
+  <text x="24" y="238" xml:space="preserve"><tspan fill="#e6edf3">    • path `test/checkout.test.ts` matches sensitive pattern `checkout` (+45)</tspan></text>
+  <text x="24" y="259" xml:space="preserve"><tspan fill="#e6edf3">    • skips a test (`.skip`/`xit`/`pytest.mark.skip`/`xfail`) (+70)</tspan></text>
+  <text x="24" y="280" xml:space="preserve"><tspan fill="#ff7b72">P0   82</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#ff7b72">████████··</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">src/auth/session.ts:5-6</tspan></text>
+  <text x="24" y="301" xml:space="preserve"><tspan fill="#e6edf3">    • path `src/auth/session.ts` matches sensitive pattern `auth` (+45)</tspan></text>
+  <text x="24" y="322" xml:space="preserve"><tspan fill="#e6edf3">    • 4 files import `src/auth/session.ts` (e.g. src/api/admin.ts, src/api/orders.ts, src/api/routes.ts) (+12)</tspan></text>
+  <text x="24" y="343" xml:space="preserve"><tspan fill="#e6edf3">    • 2 changed lines in `src/auth/session.ts`; no test file imports it or mentions `GRACE_MS` (+25)</tspan></text>
+  <text x="24" y="364" xml:space="preserve"><tspan fill="#e3b341">P1   50</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e3b341">█████·····</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">package.json:6-6</tspan></text>
+  <text x="24" y="385" xml:space="preserve"><tspan fill="#e6edf3">    • bumps `stripe` 16 → 17 (major) (+50)</tspan></text>
+  <text x="24" y="406" xml:space="preserve"><tspan fill="#e3b341">P1   48</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e3b341">█████·····</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">src/checkout.ts:5-5</tspan></text>
+  <text x="24" y="427" xml:space="preserve"><tspan fill="#e6edf3">    • path `src/checkout.ts` matches sensitive pattern `checkout` (+45)</tspan></text>
+  <text x="24" y="448" xml:space="preserve"><tspan fill="#e6edf3">    • 1 file imports `src/checkout.ts` (e.g. test/checkout.test.ts) (+3)</tspan></text>
+  <text x="24" y="469" xml:space="preserve"><tspan fill="#8b949e">P2   28</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#8b949e">███·······</tspan><tspan fill="#e6edf3">  </tspan><tspan fill="#e6edf3" font-weight="700">src/utils/format.ts:2-3</tspan></text>
+  <text x="24" y="490" xml:space="preserve"><tspan fill="#e6edf3">    • 1 file imports `src/utils/format.ts` (e.g. src/checkout.ts) (+3)</tspan></text>
+  <text x="24" y="511" xml:space="preserve"><tspan fill="#e6edf3">    • 2 changed lines in `src/utils/format.ts`; no test file imports it or mentions `dollars` (+25)</tspan></text>
+  <text x="24" y="532" xml:space="preserve"></text>
+  <text x="24" y="553" xml:space="preserve"><tspan fill="#e6edf3">6 hunks · 3 P0 · 2 P1 · 1 P2 · est. review time 2 min</tspan></text>
+  </g>
+</svg>
