@@ -1,6 +1,6 @@
 // Bundles an entry into a single ESM file and copies the wasm assets next to it.
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, readdirSync } from 'node:fs';
+import { chmodSync, cpSync, mkdirSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
@@ -27,4 +27,6 @@ for (const t of targets) {
     if (f.endsWith('.wasm')) cpSync(join(root, 'packages/core/grammars', f), join(grammars, f));
   }
   cpSync(require.resolve('web-tree-sitter/web-tree-sitter.wasm'), join(grammars, 'web-tree-sitter.wasm'));
+  // npm ships some wasm as 0755; normalise so dist/ is identical on every OS
+  for (const f of readdirSync(grammars)) chmodSync(join(grammars, f), 0o644);
 }
