@@ -1,4 +1,4 @@
-name: Review Radar
+name: Review Radar PR Heatmap
 description: Shows which lines of a PR a human must review, and why. Deterministic, offline, no LLM.
 author: 44dummies
 branding:
