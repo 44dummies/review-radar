@@ -14,6 +14,26 @@ const MSG = {
   'matcher-weakened': () => 'replaces a strict assertion with a weaker one (e.g. `toBe(x)` → `toBeDefined()`)',
 };
 
+/**
+ * Empties the contents of '…', "…" and `…` literals so patterns only match real code.
+ * `"it.skip('a')"` → `""`, while `it.skip('a', …)` keeps its call (`it.skip('', …)`).
+ */
+export function stripStrings(line: string): string {
+  let out = '';
+  let quote: string | undefined;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i]!;
+    if (quote) {
+      if (c === '\\') i++;            // skip escaped char
+      else if (c === quote) { out += c; quote = undefined; }
+      continue;
+    }
+    if (c === "'" || c === '"' || c === '`') quote = c;
+    out += c;
+  }
+  return out;
+}
+
 export const testGamingSignal: Signal = {
   name: 'test-gaming',
   run(ctx) {
@@ -30,12 +50,14 @@ export const testGamingSignal: Signal = {
         continue;
       }
       for (const h of f.hunks) {
-        if (h.added.some((l) => SKIP.test(l))) push(h.id, 'skip-added');
-        if (h.added.some((l) => ONLY.test(l))) push(h.id, 'only-added');
-        const removedAsserts = h.removed.filter((l) => ASSERT.test(l)).length;
-        const addedAsserts = h.added.filter((l) => ASSERT.test(l)).length;
+        const added = h.added.map(stripStrings);
+        const removed = h.removed.map(stripStrings);
+        if (added.some((l) => SKIP.test(l))) push(h.id, 'skip-added');
+        if (added.some((l) => ONLY.test(l))) push(h.id, 'only-added');
+        const removedAsserts = removed.filter((l) => ASSERT.test(l)).length;
+        const addedAsserts = added.filter((l) => ASSERT.test(l)).length;
         if (removedAsserts > addedAsserts) push(h.id, 'assertions-removed', String(removedAsserts - addedAsserts));
-        else if (h.removed.some((l) => STRICT.test(l)) && h.added.some((l) => WEAK.test(l))) push(h.id, 'matcher-weakened');
+        else if (removed.some((l) => STRICT.test(l)) && added.some((l) => WEAK.test(l))) push(h.id, 'matcher-weakened');
       }
     }
     return out;

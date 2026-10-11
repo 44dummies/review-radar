@@ -27,6 +27,19 @@ describe('test-gaming', () => {
     expect(rules(diffOf({ 'a.spec.ts': { del: ['  expect(total).toBe(42);'], add: ['  expect(total).toBeDefined();'] } })))
       .toEqual(['matcher-weakened']);
   });
+  it('ignores test-gaming patterns that only appear inside string literals', () => {
+    expect(rules(diffOf({ 'test/fixtures.test.ts': { add: [
+      `  r.write({ 'a.test.ts': "it.skip('a', () => {});\\n" });`,
+      "  const src = `describe.only('x', () => {})`;",
+      "  check('@pytest.mark.skip on line 3');",
+    ] } }))).toEqual([]);
+  });
+  it('still flags a real skip that has a string argument', () => {
+    expect(rules(diffOf({ 'a.test.ts': { add: ["it.skip('handles \"quoted\" names', () => {"] } }))).toEqual(['skip-added']);
+  });
+  it('does not count assertions written inside strings', () => {
+    expect(rules(diffOf({ 'a.test.ts': { del: ['  const s = "expect(a).toBe(1)";'], add: ['  const s = "";'] } }))).toEqual([]);
+  });
   it('ignores the same patterns in non-test files', () => {
     expect(rules(diffOf({ 'src/a.ts': { add: ["it.skip('x')"] } }))).toEqual([]);
   });
