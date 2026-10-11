@@ -1,0 +1,12 @@
+{
+  "name": "review-radar",
+  "description": "Review Radar: see which hunks of your change a reviewer must read, and why.",
+  "owner": { "name": "44dummies" },
+  "plugins": [
+    {
+      "name": "review-radar",
+      "source": "./",
+      "description": "Before opening a PR, rank your changes by review risk and catch skipped or weakened tests. Deterministic, offline, no LLM."
+    }
+  ]
+}
