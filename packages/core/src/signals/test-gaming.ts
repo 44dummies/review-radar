@@ -3,15 +3,26 @@ import type { Evidence, Signal } from '../types';
 const SKIP = /\b(it|test|describe)\.skip\s*\(|\bx(it|describe|test)\s*\(|@pytest\.mark\.(skip|xfail)|\bpytest\.skip\s*\(|@unittest\.skip/;
 const ONLY = /\b(it|test|describe)\.only\s*\(|\bf(it|describe)\s*\(/;
 const ASSERT = /\bexpect\s*\(|\bassert\b|\bself\.assert\w+\s*\(|\bassert\w*\s*\(/;
-const STRICT = /\.(toBe|toEqual|toStrictEqual|toHaveBeenCalledWith|toMatchObject)\s*\(\s*[^)\s]|\.toThrow\s*\(\s*[^)\s]|assert\s+[^=\n]+==/;
-const WEAK = /\.(toBeDefined|toBeTruthy|toBeFalsy)\s*\(\s*\)|\.not\.toBeNull\s*\(\s*\)|\.toThrow\s*\(\s*\)|\.toHaveBeenCalled\s*\(\s*\)|^\s*assert\s+\w+\s*$/;
+// Jest/Vitest | Python bare assert | node:assert | chai expect/should
+const STRICT = new RegExp([
+  /\.(toBe|toEqual|toStrictEqual|toHaveBeenCalledWith|toMatchObject)\s*\(\s*[^)\s]|\.toThrow\s*\(\s*[^)\s]/.source,
+  /assert\s+[^=\n]+==/.source,
+  /\bassert(\.strict)?\.(equal|strictEqual|deepEqual|deepStrictEqual|match)\s*\(/.source,
+  /\.(to|should)(\.(not|deep|be|been|have|that))*\.(equal|equals|eql|include|match|members|lengthOf|length|property|throw)\s*\(\s*[^)\s]/.source,
+].join('|'));
+const WEAK = new RegExp([
+  /\.(toBeDefined|toBeTruthy|toBeFalsy)\s*\(\s*\)|\.not\.toBeNull\s*\(\s*\)|\.toThrow\s*\(\s*\)|\.toHaveBeenCalled\s*\(\s*\)/.source,
+  /^\s*assert\s+\w+\s*$/.source,
+  /\bassert(\.strict)?(\.ok)?\s*\((?![^\n]*([=!]==?|[<>]=?|\b(in|is|instanceof)\b))/.source, // truthiness only, no comparison
+  /\.(to|should)(\.(not|be|been))*\.(exist|ok)\b|\.(to|should)\.not\.be\.(undefined|null)\b|\.(to|should)(\.\w+)*\.throw\s*\(\s*\)/.source,
+].join('|'));
 
 const MSG = {
   'test-file-deleted': (p: string) => `deletes test file \`${p}\``,
   'skip-added': () => 'skips a test (`.skip`/`xit`/`pytest.mark.skip`/`xfail`)',
   'only-added': () => 'focuses a single test with `.only`/`fit` (other tests stop running)',
   'assertions-removed': (n: string) => `removes ${n} more assertion(s) than it adds`,
-  'matcher-weakened': () => 'replaces a strict assertion with a weaker one (e.g. `toBe(x)` → `toBeDefined()`)',
+  'matcher-weakened': () => 'replaces a strict assertion with a weaker one (e.g. `toBe(x)` → `toBeDefined()`, `assert.equal` → `assert.ok`)',
 };
 
 /**
