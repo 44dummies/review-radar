@@ -15,3 +15,4 @@ export * from './sarif-input';
 export * from './signals/index';
 export * from './scorer';
 export * from './analyze';
+export * from './reporters/index';
