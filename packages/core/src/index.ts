@@ -9,3 +9,5 @@ export * from './assets';
 export * from './imports/parser';
 export * from './imports/resolve';
 export * from './imports/graph';
+export * from './symbols';
+export * from './lcov';
