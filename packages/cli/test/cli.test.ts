@@ -17,6 +17,20 @@ function fixture() {
 }
 
 describe('cli', () => {
+  it('--working-tree reviews uncommitted changes; the default stays committed-only', async () => {
+    const r = makeRepo();
+    r.write({ 'src/a.test.ts': "it('a', () => {});\n" });
+    r.commit('init');
+    r.write({ 'src/a.test.ts': "it.skip('a', () => {});\n" });
+    const wt = await run(['--working-tree', '--no-color'], r.root);
+    expect(wt.code).toBe(0);
+    expect(wt.out).toContain('src/a.test.ts');
+    expect((await run(['--no-color'], r.root)).out).not.toContain('src/a.test.ts');
+  });
+  it('documents --working-tree in --help', async () => {
+    const { r } = fixture();
+    expect((await run(['--help'], r.root)).out).toContain('--working-tree');
+  });
   it('prints the terminal report and exits 0 by default', async () => {
     const { r, range } = fixture();
     const res = await run([range, '--no-color'], r.root);

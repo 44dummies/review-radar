@@ -18,6 +18,7 @@ Options:
   --out <file>       Write the report to a file instead of stdout
   --fail-on <tier>   Exit 1 if any hunk is at or above P0 | P1
   --config <file>    Config file (default: .reviewradar.yml)
+  --working-tree     Also review uncommitted and untracked changes (no-range mode)
   --no-cache         Rebuild the import graph
   --no-color         Disable colors
   -v, --version      Print version
@@ -44,7 +45,7 @@ export async function main(argv: string[], io: IO): Promise<number> {
       options: {
         sarif: { type: 'string', multiple: true }, lcov: { type: 'string' }, format: { type: 'string', default: 'terminal' },
         out: { type: 'string' }, 'fail-on': { type: 'string' }, config: { type: 'string' },
-        'no-cache': { type: 'boolean' }, 'no-color': { type: 'boolean' },
+        'no-cache': { type: 'boolean' }, 'working-tree': { type: 'boolean' }, 'no-color': { type: 'boolean' },
         version: { type: 'boolean', short: 'v' }, help: { type: 'boolean', short: 'h' },
       },
     });
@@ -63,7 +64,7 @@ export async function main(argv: string[], io: IO): Promise<number> {
   try {
     const map = await analyze({
       repoRoot: io.cwd, range: positionals[0], sarifPaths: v.sarif, lcovPath: v.lcov,
-      configPath: v.config, useCache: !v['no-cache'],
+      configPath: v.config, useCache: !v['no-cache'], workingTree: v['working-tree'],
     });
     const text = render(map, format, { color: !v['no-color'] && !v.out });
     if (v.out) writeFileSync(isAbsolute(v.out) ? v.out : join(io.cwd, v.out), text);
