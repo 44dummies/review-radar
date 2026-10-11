@@ -34,6 +34,7 @@ AI agents write pull requests faster than anyone can read them, so teams either 
 - 🕸️ **Knows the blast radius** from a tree-sitter import graph (TypeScript, JavaScript, Python)
 - 🔐 **Flags sensitive code**: auth, payments, migrations, CI workflows, `eval`, `child_process`, disabled TLS…
 - 🔌 **Plays with your scanners**: takes SARIF from Semgrep, CodeQL or noskip, and emits SARIF for GitHub code scanning
+- 🧩 **Works inside your coding agent**: an MCP server and a Claude Code plugin let agents check their own work before they open a PR
 - 🤖 **Labels likely AI-authored PRs** from agent trailers and bot authors
 - 🔒 **Deterministic and offline**: no LLM, no API key, your code never leaves the runner, and the same diff always gets the same scores
 
@@ -67,6 +68,39 @@ npx review-radar --fail-on P0       # exit 1 if anything must be read
 ```
 
 Works in any git repo with Node 20 or newer. Nothing to configure.
+
+### Coding agents (MCP + Claude Code plugin)
+
+Let your agent check *where a reviewer will look* before it opens the PR. It reviews uncommitted work too.
+
+**Claude Code** (skill + MCP server in one step):
+
+```text
+/plugin install review-radar --marketplace 44dummies/review-radar
+```
+
+On Claude Code older than 2.1.275, run `/plugin marketplace add 44dummies/review-radar`, then `/plugin install review-radar@review-radar`.
+
+The `review-before-pr` skill runs the review, makes the agent undo its own test gaming (skipped or weakened tests), and adds a **Where to look** section to the PR description.
+
+**Cursor, Codex, Claude Desktop and other MCP clients:**
+
+```json
+{ "mcpServers": { "review-radar": { "command": "npx", "args": ["-y", "review-radar", "mcp"] } } }
+```
+
+On native Windows use `"command": "cmd", "args": ["/c", "npx", "-y", "review-radar", "mcp"]`. For Codex, add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.review-radar]
+command = "npx"
+args = ["-y", "review-radar", "mcp"]
+```
+
+| Tool | Returns |
+|---|---|
+| `review_changes` | Ranked hunks with tier, score, `file:lines` and evidence (structured), plus the terminal report |
+| `pr_review_guide` | A markdown **Where to look** section for the PR description |
 
 ## 👀 What you get on a PR
 
@@ -204,7 +238,7 @@ Each signal is one small, self-contained file in [`packages/core/src/signals`](p
 ## 🧭 Roadmap
 
 - [x] CLI + GitHub Action, 9 signals, SARIF in and out
-- [ ] **MCP server + Claude Code / Codex skill**, so agents see where a reviewer will look *before* they open the PR
+- [x] **MCP server + Claude Code plugin**, so agents see where a reviewer will look *before* they open the PR
 - [ ] More import-graph languages: Go, Java, Rust
 - [ ] Co-change coupling from git history
 - [ ] Optional LLM explainer for P0 hunks only
