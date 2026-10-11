@@ -1,0 +1,8 @@
+# Review Radar config for this repo (dogfood). All keys optional.
+sensitivePaths:
+  - "packages/core/src/scorer"   # weight changes must be reviewed
+ignore:
+  - "dist/**"
+  - "packages/core/grammars/**"
+  - "packages/core/test/fixtures/**"
+  - "package-lock.json"
