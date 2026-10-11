@@ -14275,7 +14275,7 @@ function summarize(risks, skippedFiles) {
 // packages/core/src/analyze.ts
 import { existsSync as existsSync4, readFileSync as readFileSync4 } from "node:fs";
 import { isAbsolute as isAbsolute3, join as join5 } from "node:path";
-var VERSION = "1.0.2";
+var VERSION = "1.1.0";
 var abs = (root, p) => isAbsolute3(p) ? p : join5(root, p);
 function readInput(root, p, kind) {
   const full = abs(root, p);
