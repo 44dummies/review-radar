@@ -29,7 +29,7 @@ You get **one** PR comment (edited on every push, never re-posted), a job summar
 
 ![Review Radar PR comment](docs/img/pr-comment.png)
 
-The same findings show up inline in **Files changed** through GitHub code scanning:
+The same findings show up inline in **Files changed** through GitHub code scanning (P0 as warnings, P1 as notes, so they never turn your PR red unless you set `fail-on`):
 
 ![Review Radar alert in GitHub code scanning](docs/img/code-scanning.png)
 

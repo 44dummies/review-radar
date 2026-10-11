@@ -70,9 +70,11 @@ describe('sarif', () => {
     const results = doc.runs[0].results;
     expect(results).toHaveLength(3);
     expect(results.map((r: any) => [r.ruleId, r.level])).toEqual([
-      ['test-gaming', 'error'],    // src/auth.ts: highest-weight evidence
-      ['test-gaming', 'warning'],  // src/api.ts: the fixture helper labels the first evidence 'test-gaming'
-      ['test-gaming', 'error'],    // old.test.ts
+      // P0 → warning, P1 → note: GitHub code scanning fails the PR check on any 'error',
+      // and blocking merges must stay opt-in via --fail-on / fail-on.
+      ['test-gaming', 'warning'],  // src/auth.ts: highest-weight evidence
+      ['test-gaming', 'note'],     // src/api.ts: the fixture helper labels the first evidence 'test-gaming'
+      ['test-gaming', 'warning'],  // old.test.ts
     ]);
     expect(results[0].message.text).toBe('skips a test; hunk changes 45 lines (score 85, P0)');
     const del = results.find((r: any) => r.locations[0].physicalLocation.artifactLocation.uri === 'old.test.ts');

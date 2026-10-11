@@ -26,7 +26,8 @@ export function renderSarif(map: RiskMap): string {
       } },
       results: flagged.map((r) => ({
         ruleId: top(r),
-        level: r.tier === 'P0' ? 'error' : 'warning',
+        // never 'error': code scanning fails the PR check on errors; blocking is opt-in via fail-on
+        level: r.tier === 'P0' ? 'warning' : 'note',
         message: { text: `${r.evidence.map((e) => e.message).join('; ')} (score ${r.score}, ${r.tier})` },
         locations: [{ physicalLocation: {
           artifactLocation: { uri: r.hunk.file },
