@@ -1,0 +1,23 @@
+{
+  "name": "review-radar-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p .",
+    "grammars": "node scripts/fetch-grammars.mjs",
+    "build": "node scripts/bundle.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@types/picomatch": "^4.0.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "ajv": "^8.20.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.11"
+  }
+}
