@@ -27,6 +27,10 @@ describe('cli', () => {
     expect(wt.out).toContain('src/a.test.ts');
     expect((await run(['--no-color'], r.root)).out).not.toContain('src/a.test.ts');
   });
+  it('documents the mcp subcommand in --help', async () => {
+    const { r } = fixture();
+    expect((await run(['--help'], r.root)).out).toContain('review-radar mcp');
+  });
   it('documents --working-tree in --help', async () => {
     const { r } = fixture();
     expect((await run(['--help'], r.root)).out).toContain('--working-tree');

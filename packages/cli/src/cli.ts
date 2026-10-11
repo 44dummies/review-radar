@@ -4,8 +4,10 @@ import { realpathSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyze, render, FORMATS, RadarError, VERSION, type Format } from '@review-radar/core';
+import { startStdio } from './mcp';
 
 const HELP = `Usage: review-radar [<base>...<head>] [options]
+       review-radar mcp          Start the MCP server (stdio) for coding agents
 
 Shows which hunks of a change need human review, and why.
 With no range: current branch vs the merge-base with main. base...head diffs from
@@ -38,6 +40,7 @@ export function isMainModule(metaUrl: string, argv1: string | undefined): boolea
 interface IO { stdout: (s: string) => void; stderr: (s: string) => void; cwd: string }
 
 export async function main(argv: string[], io: IO): Promise<number> {
+  if (argv[0] === 'mcp') { startStdio(io.cwd); return 0; }
   let parsed;
   try {
     parsed = parseArgs({
