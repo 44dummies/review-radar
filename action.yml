@@ -1,0 +1,57 @@
+name: Review Radar
+description: Shows which lines of a PR a human must review, and why. Deterministic, offline, no LLM.
+author: 44dummies
+branding:
+  icon: radio
+  color: red
+inputs:
+  sarif:
+    description: Comma-separated SARIF files from other scanners (Semgrep, CodeQL, noskip, open-code-review)
+    required: false
+    default: ''
+  lcov:
+    description: Path to an LCOV coverage report
+    required: false
+    default: ''
+  fail-on:
+    description: Fail the job if any hunk is at or above P0 or P1
+    required: false
+    default: ''
+  upload-sarif:
+    description: Upload results to GitHub code scanning (free on public repos)
+    required: false
+    default: 'true'
+  github-token:
+    description: Token used to post the PR comment
+    required: false
+    default: ${{ github.token }}
+outputs:
+  sarif-file:
+    description: Path to the generated SARIF file
+    value: ${{ steps.radar.outputs.sarif-file }}
+  p0:
+    description: Number of P0 hunks
+    value: ${{ steps.radar.outputs.p0 }}
+  p1:
+    description: Number of P1 hunks
+    value: ${{ steps.radar.outputs.p1 }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 20
+    - id: radar
+      shell: bash
+      run: node "${{ github.action_path }}/dist/index.mjs"
+      env:
+        INPUT_SARIF: ${{ inputs.sarif }}
+        INPUT_LCOV: ${{ inputs.lcov }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+    - if: ${{ always() && inputs.upload-sarif == 'true' && steps.radar.outputs.sarif-file != '' }}
+      uses: github/codeql-action/upload-sarif@v4
+      continue-on-error: true
+      with:
+        sarif_file: ${{ steps.radar.outputs.sarif-file }}
+        category: review-radar
