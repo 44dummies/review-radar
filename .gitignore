@@ -4,3 +4,5 @@ packages/*/dist/
 .superpowers/
 coverage/
 *.log
+packages/cli/README.md
+packages/cli/LICENSE
