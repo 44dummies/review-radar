@@ -27,7 +27,7 @@ describe('analyze', () => {
     expect(map.hunks.map((h) => h.hunk.file)).toContain('src/auth/session.ts');
     expect(map.hunks.find((h) => h.hunk.file === 'README.md')!.tier).toBe('P2');
     expect(map.meta.aiAuthored.likely).toBe(true);
-    expect(map.meta.version).toBe('1.0.0');
+    expect(map.meta.version).toBe('1.0.2');
     expect(map.summary.hunks).toBe(map.hunks.length);
   });
 

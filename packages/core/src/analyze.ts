@@ -13,7 +13,7 @@ import { defaultSignals } from './signals/index';
 import { scoreHunks, summarize } from './scorer';
 import { RadarError } from './errors';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.0.2';
 
 export interface AnalyzeOptions {
   repoRoot: string;

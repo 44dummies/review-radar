@@ -38381,6 +38381,24 @@ var MSG = {
   "assertions-removed": (n) => `removes ${n} more assertion(s) than it adds`,
   "matcher-weakened": () => "replaces a strict assertion with a weaker one (e.g. `toBe(x)` \u2192 `toBeDefined()`)"
 };
+function stripStrings(line) {
+  let out2 = "";
+  let quote;
+  for (let i2 = 0; i2 < line.length; i2++) {
+    const c = line[i2];
+    if (quote) {
+      if (c === "\\") i2++;
+      else if (c === quote) {
+        out2 += c;
+        quote = void 0;
+      }
+      continue;
+    }
+    if (c === "'" || c === '"' || c === "`") quote = c;
+    out2 += c;
+  }
+  return out2;
+}
 var testGamingSignal = {
   name: "test-gaming",
   run(ctx) {
@@ -38395,12 +38413,14 @@ var testGamingSignal = {
         continue;
       }
       for (const h of f.hunks) {
-        if (h.added.some((l) => SKIP.test(l))) push(h.id, "skip-added");
-        if (h.added.some((l) => ONLY.test(l))) push(h.id, "only-added");
-        const removedAsserts = h.removed.filter((l) => ASSERT.test(l)).length;
-        const addedAsserts = h.added.filter((l) => ASSERT.test(l)).length;
+        const added = h.added.map(stripStrings);
+        const removed = h.removed.map(stripStrings);
+        if (added.some((l) => SKIP.test(l))) push(h.id, "skip-added");
+        if (added.some((l) => ONLY.test(l))) push(h.id, "only-added");
+        const removedAsserts = removed.filter((l) => ASSERT.test(l)).length;
+        const addedAsserts = added.filter((l) => ASSERT.test(l)).length;
         if (removedAsserts > addedAsserts) push(h.id, "assertions-removed", String(removedAsserts - addedAsserts));
-        else if (h.removed.some((l) => STRICT.test(l)) && h.added.some((l) => WEAK.test(l))) push(h.id, "matcher-weakened");
+        else if (removed.some((l) => STRICT.test(l)) && added.some((l) => WEAK.test(l))) push(h.id, "matcher-weakened");
       }
     }
     return out2;
@@ -38606,7 +38626,7 @@ function summarize(risks, skippedFiles) {
 // packages/core/src/analyze.ts
 import { existsSync as existsSync6, readFileSync as readFileSync4 } from "node:fs";
 import { isAbsolute as isAbsolute2, join as join4 } from "node:path";
-var VERSION7 = "1.0.0";
+var VERSION7 = "1.0.2";
 var abs = (root, p) => isAbsolute2(p) ? p : join4(root, p);
 function readInput(root, p, kind) {
   const full = abs(root, p);
