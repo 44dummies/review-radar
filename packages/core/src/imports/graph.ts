@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import type { ImportGraph } from '../types';
 import { git } from '../git';
 import { languageOf } from '../lang';
@@ -26,7 +26,9 @@ export async function buildImportGraph(
   opts: { useCache?: boolean; maxFiles?: number } = {},
 ): Promise<ImportGraph> {
   const useCache = opts.useCache ?? true;
-  const cacheDir = join(repoRoot, '.reviewradar-cache');
+  // inside the git dir, so the cache never shows up as a change (or in `git status`)
+  const gitPath = git(repoRoot, ['rev-parse', '--git-path', 'review-radar']).trim();
+  const cacheDir = isAbsolute(gitPath) ? gitPath : join(repoRoot, gitPath);
   const cacheFile = join(cacheDir, `graph-${head}.json`);
   if (useCache && existsSync(cacheFile)) {
     return fromEdges(JSON.parse(readFileSync(cacheFile, 'utf8')) as Edges);

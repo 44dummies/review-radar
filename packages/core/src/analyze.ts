@@ -23,6 +23,8 @@ export interface AnalyzeOptions {
   configPath?: string;
   useCache?: boolean;
   signals?: Signal[];
+  /** With no range: also review uncommitted and untracked changes. */
+  workingTree?: boolean;
 }
 
 const abs = (root: string, p: string) => (isAbsolute(p) ? p : join(root, p));
@@ -36,7 +38,7 @@ function readInput(root: string, p: string, kind: string): string {
 export async function analyze(opts: AnalyzeOptions): Promise<RiskMap> {
   const { repoRoot } = opts;
   const config = loadConfig(repoRoot, opts.configPath);
-  const raw = getChangeSet(repoRoot, opts.range);
+  const raw = getChangeSet(repoRoot, opts.range, { workingTree: opts.workingTree });
   const warnings: string[] = [];
 
   const skippedFiles = raw.files.filter((f) => f.binary && !isIgnored(f.path, config)).map((f) => f.path);
@@ -65,7 +67,8 @@ export async function analyze(opts: AnalyzeOptions): Promise<RiskMap> {
   const tracked = git(repoRoot, ['ls-files', '-z']).split('\0').filter(Boolean);
   const ctx: Context = {
     repoRoot, changeSet, importGraph, git: history, sarif, lcov, config,
-    testFiles: tracked.filter(isTestFile),
+    // newly added files (untracked in working-tree mode) can be tests too
+    testFiles: [...new Set([...tracked, ...changeSet.files.filter((f) => f.status === 'added').map((f) => f.path)])].filter(isTestFile),
     readFile: (p) => { try { return readFileSync(join(repoRoot, p), 'utf8'); } catch { return undefined; } },
   };
 

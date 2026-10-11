@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { extractSpecifiers } from '../src/imports/parser';
 import { resolveSpecifier } from '../src/imports/resolve';
 import { buildImportGraph } from '../src/imports/graph';
@@ -59,7 +59,10 @@ describe('buildImportGraph', () => {
     expect(g.importedBy('src/core.ts').sort()).toEqual(['src/a.ts', 'src/b.tsx', 'src/core.test.ts']);
     expect(g.importsOf('src/a.ts')).toEqual(['src/core.ts']);
     expect(g.importedBy('py/lib.py')).toEqual(['py/use.py']);
-    expect(existsSync(join(r.root, '.reviewradar-cache', `graph-${head}.json`))).toBe(true);
+    expect(existsSync(join(r.root, '.reviewradar-cache'))).toBe(false);
+    const gp = r.git('rev-parse', '--git-path', 'review-radar');
+    const dir = isAbsolute(gp) ? gp : join(r.root, gp);
+    expect(existsSync(join(dir, `graph-${head}.json`))).toBe(true);
     const cached = await buildImportGraph(r.root, head);
     expect(cached.importedBy('src/core.ts').sort()).toEqual(g.importedBy('src/core.ts').sort());
   });

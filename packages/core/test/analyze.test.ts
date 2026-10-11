@@ -82,3 +82,21 @@ describe('analyze', () => {
     expect(signals).toContain('untested-change');
   });
 });
+
+describe('analyze workingTree', () => {
+  it('scores uncommitted test gaming and counts new untracked tests as tests', async () => {
+    const r = makeRepo();
+    r.write({ 'src/a.ts': 'export const total = 1;\n', 'src/a.test.ts': "it('a', () => {});\n" });
+    r.commit('init');
+    r.write({
+      'src/a.ts': 'export const total = 2;\n',
+      'src/a.test.ts': "it.skip('a', () => {});\n",
+      'src/b.test.ts': "import { total } from './a';\nit('b', () => expect(total).toBe(2));\n",
+    });
+    const map = await analyze({ repoRoot: r.root, workingTree: true, useCache: false });
+    expect(map.hunks[0]!.hunk.file).toBe('src/a.test.ts');
+    expect(map.hunks[0]!.tier).toBe('P0');
+    const aHunk = map.hunks.find((h) => h.hunk.file === 'src/a.ts')!;
+    expect(aHunk.evidence.map((e) => e.signal)).not.toContain('untested-change');
+  });
+});

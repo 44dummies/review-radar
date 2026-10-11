@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseUnifiedDiff, getChangeSet } from '../src/diff';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { RadarError } from '../src/errors';
 import { makeRepo } from './helpers/repo';
 
@@ -131,5 +133,68 @@ describe('getChangeSet', () => {
 
   it('throws NOT_A_REPO outside git', () => {
     expect(() => getChangeSet(process.platform === 'win32' ? 'C:\\' : '/')).toThrow(RadarError);
+  });
+});
+
+describe('getChangeSet workingTree', () => {
+  function repo() {
+    const r = makeRepo();
+    r.write({ 'src/a.ts': 'export const a = 1;\n', '.gitignore': 'out/\n' });
+    r.commit('init');
+    return r;
+  }
+  const paths = (r: ReturnType<typeof repo>) => getChangeSet(r.root, undefined, { workingTree: true }).files.map((f) => f.path).sort();
+
+  it('includes unstaged edits', () => {
+    const r = repo();
+    r.write({ 'src/a.ts': 'export const a = 2;\n' });
+    const [f] = getChangeSet(r.root, undefined, { workingTree: true }).files;
+    expect(f!.path).toBe('src/a.ts');
+    expect(f!.hunks[0]!.added).toEqual(['export const a = 2;']);
+  });
+  it('includes staged edits', () => {
+    const r = repo();
+    r.write({ 'src/a.ts': 'export const a = 3;\n' });
+    r.git('add', 'src/a.ts');
+    expect(paths(r)).toEqual(['src/a.ts']);
+  });
+  it('adds untracked files as added files covering every line', () => {
+    const r = repo();
+    r.write({ 'src/new.ts': 'a\nb\n' });
+    const f = getChangeSet(r.root, undefined, { workingTree: true }).files.find((x) => x.path === 'src/new.ts')!;
+    expect(f.status).toBe('added');
+    expect(f.language).toBe('ts');
+    expect(f.hunks[0]).toMatchObject({ id: 'src/new.ts:1-2', newRange: { start: 1, end: 2 }, added: ['a', 'b'], addedLines: [1, 2] });
+  });
+  it('skips gitignored untracked files and the legacy cache dir', () => {
+    const r = repo();
+    r.write({ 'out/x.js': '1\n', '.reviewradar-cache/graph-abc.json': '{}\n' });
+    expect(paths(r)).toEqual([]);
+  });
+  it('marks binary or oversized untracked files as binary', () => {
+    const r = repo();
+    writeFileSync(join(r.root, 'img.png'), Buffer.from([0x89, 0x50, 0, 1, 2]));
+    r.write({ 'big.js': 'x\n'.repeat(600_000) });
+    const files = getChangeSet(r.root, undefined, { workingTree: true }).files;
+    expect(files.map((f) => [f.path, f.binary]).sort()).toEqual([['big.js', true], ['img.png', true]]);
+  });
+  it('handles CRLF content and spaces in untracked names', () => {
+    const r = repo();
+    r.write({ 'my file.ts': 'a\r\nb\r\n' });
+    const [f] = getChangeSet(r.root, undefined, { workingTree: true }).files;
+    expect(f!.path).toBe('my file.ts');
+    expect(f!.hunks[0]!.added).toEqual(['a', 'b']);
+  });
+  it('ignores workingTree when an explicit range is given', () => {
+    const r = repo();
+    const base = r.git('rev-parse', 'HEAD');
+    r.write({ 'src/b.ts': 'export const b = 1;\n' });
+    r.commit('b');
+    r.write({ 'src/a.ts': 'export const a = 9;\n' });
+    const cs = getChangeSet(r.root, `${base}..HEAD`, { workingTree: true });
+    expect(cs.files.map((f) => f.path)).toEqual(['src/b.ts']);
+  });
+  it('returns no files for a clean tree at the merge-base', () => {
+    expect(paths(repo())).toEqual([]);
   });
 });

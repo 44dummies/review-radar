@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ChangedFile, ChangeSet, Hunk, Range } from './types';
 import { languageOf, isTestFile } from './lang';
 import { git, tryGit } from './git';
@@ -110,7 +112,36 @@ function resolveCommit(repoRoot: string, ref: string, role: 'base' | 'head'): st
   return sha;
 }
 
-export function getChangeSet(repoRoot: string, rangeArg?: string): ChangeSet {
+export interface ChangeSetOptions {
+  /** With no range: diff the merge-base against the files on disk, including untracked files. */
+  workingTree?: boolean;
+}
+
+const MAX_UNTRACKED_BYTES = 1024 * 1024; // bigger untracked files are treated like binaries
+const LEGACY_CACHE = '.reviewradar-cache/';
+
+/** Untracked, non-ignored files as "added" files, built through the same diff parser. */
+function untrackedFiles(repoRoot: string): ChangedFile[] {
+  const paths = git(repoRoot, ['ls-files', '--others', '--exclude-standard', '-z']).split('\0').filter(Boolean);
+  const out: string[] = [];
+  for (const p of paths) {
+    if (p.startsWith(LEGACY_CACHE)) continue;
+    let buf: Buffer;
+    try { buf = readFileSync(join(repoRoot, p)); } catch { continue; }
+    out.push(`diff --git a/${p} b/${p}`, 'new file mode 100644');
+    if (buf.length > MAX_UNTRACKED_BYTES || buf.subarray(0, 8000).includes(0)) {
+      out.push(`Binary files /dev/null and b/${p} differ`);
+      continue;
+    }
+    const lines = buf.toString('utf8').replace(/\r\n/g, '\n').split('\n');
+    if (lines.at(-1) === '') lines.pop();
+    out.push('--- /dev/null', `+++ b/${p}`);
+    if (lines.length) out.push(`@@ -0,0 +1,${lines.length} @@`, ...lines.map((l) => `+${l}`));
+  }
+  return parseUnifiedDiff(out.join('\n') + '\n');
+}
+
+export function getChangeSet(repoRoot: string, rangeArg?: string, opts: ChangeSetOptions = {}): ChangeSet {
   if (!tryGit(repoRoot, ['rev-parse', '--is-inside-work-tree'])) {
     throw new RadarError('NOT_A_REPO', `${repoRoot} is not inside a git repository.`);
   }
@@ -134,6 +165,10 @@ export function getChangeSet(repoRoot: string, rangeArg?: string): ChangeSet {
     const mb = tryGit(repoRoot, ['merge-base', branch, head])?.trim();
     if (!mb) throw new RadarError('BASE_NOT_FOUND', `No merge-base between ${branch} and HEAD. In GitHub Actions use actions/checkout with fetch-depth: 0.`);
     base = mb;
+  }
+  if (!rangeArg && opts.workingTree) {
+    const text = git(repoRoot, ['diff', '--no-color', '--no-ext-diff', '-U0', '-M', base]);
+    return { base, head, files: [...parseUnifiedDiff(text), ...untrackedFiles(repoRoot)] };
   }
   const text = git(repoRoot, ['diff', '--no-color', '--no-ext-diff', '-U0', '-M', base, head]);
   return { base, head, files: parseUnifiedDiff(text) };
