@@ -2,11 +2,11 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
-const cli = join(import.meta.dirname, '..', process.argv[2] ?? 'dist/cli.mjs');
+const cli = resolve(import.meta.dirname, '..', process.argv[2] ?? 'dist/cli.mjs');
 const repo = mkdtempSync(join(tmpdir(), 'rr-smoke-'));
 const git = (...args) => execFileSync('git', args, { cwd: repo, stdio: 'pipe' });
 git('init', '-q', '-b', 'main');
