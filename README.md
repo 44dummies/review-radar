@@ -102,6 +102,8 @@ Each review of your working tree or staged changes adds a line to `.git/review-r
 - `today` counts importers for branches that aren't checked out using your current checkout.
 
 > In our end-to-end runs, an agent's branch "passed" because it had skipped one test and loosened an exact assertion to `assert.ok`, hiding a bug where a negative discount raised the price. With the plugin installed, Claude ran the review, restored both tests, fixed the bug they hid, and re-checked before writing the PR description.
+>
+> In v1.2 runs, "What should I review?" triggered the `review` skill without naming it. Asked to commit a staged `test.skip`, the agent got the hook's warning and told the user; with `preCommit: block`, the commit was refused and the agent asked rather than weakening the config. `/review-radar:today` put the payments branch first.
 
 **Cursor, Codex, Claude Desktop and other MCP clients:**
 
