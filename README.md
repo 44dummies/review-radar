@@ -125,6 +125,11 @@ args = ["-y", "review-radar", "mcp"]
 | `pr_review_guide` | A markdown **Where to look** section for the PR description |
 | `review_branches` | Open branches and worktrees ranked by P0/P1 hunks, each with its riskiest hunk and today's trend |
 
+**Using with [ECC](https://github.com/affaan-m/ECC):** the two fit together. Review Radar decides *where* to look, and ECC's agents do the deep reading:
+- Give ECC's `code-reviewer` (or `security-reviewer`, for `sensitive-path` evidence) the P0/P1 list from `review_changes` instead of the whole diff.
+- Run the review after ECC's `tdd-workflow` or `verification-loop` passes. Green tests don't tell you whether a test was skipped or weakened on the way, and the commit hook does.
+- ECC users who don't want the plugin can add the MCP server on its own (`npx -y review-radar mcp`, shown above).
+
 ## 👀 What you get on a PR
 
 <table>
