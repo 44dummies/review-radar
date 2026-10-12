@@ -105,7 +105,16 @@ Each review of your working tree or staged changes adds a line to `.git/review-r
 >
 > In v1.2 runs, "What should I review?" triggered the `review` skill without naming it. Asked to commit a staged `test.skip`, the agent got the hook's warning and told the user; with `preCommit: block`, the commit was refused and the agent asked rather than weakening the config. `/review-radar:today` put the payments branch first.
 
-**Cursor, Codex, Claude Desktop and other MCP clients:**
+**Codex** (plugin with the same three skills and the MCP server):
+
+```bash
+codex plugin marketplace add 44dummies/review-radar
+codex plugin add review-radar@review-radar
+```
+
+The plugin also ships the test-gaming commit hook. Codex runs a plugin hook only after you approve it under `/hooks`. The install and skills are verified on Codex. The hook and starting the MCP server on native Windows haven't been tested in a live Codex session yet, so please [open an issue](https://github.com/44dummies/review-radar/issues/new) if either misbehaves.
+
+**Cursor, Codex (MCP only), Claude Desktop and other MCP clients:**
 
 ```json
 { "mcpServers": { "review-radar": { "command": "npx", "args": ["-y", "review-radar", "mcp"] } } }

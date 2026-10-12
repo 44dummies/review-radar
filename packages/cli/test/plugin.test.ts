@@ -64,4 +64,24 @@ describe('claude code plugin', () => {
       }],
     }]);
   });
+  describe('codex plugin', () => {
+    const codex = () => json('.codex-plugin/plugin.json');
+    it('mirrors the Claude plugin identity and ships the same skills', () => {
+      expect(codex()).toMatchObject({ name: 'review-radar', version: json('packages/cli/package.json').version, skills: './skills/' });
+    });
+    it('runs the published npm version as its MCP server, from the session folder', () => {
+      const mcp = json(codex().mcpServers.slice(2));
+      // Codex does not expand plugin-root variables in MCP args, and the server reviews its cwd
+      expect(mcp.mcpServers['review-radar']).toEqual({
+        command: 'npx', args: ['-y', `review-radar@${json('packages/cli/package.json').version}`, 'mcp'],
+      });
+    });
+    it('registers the commit hook as one command string (Codex has no args or if fields)', () => {
+      const h = json(codex().hooks.slice(2));
+      expect(h.hooks.PreToolUse).toEqual([{
+        matcher: 'Bash',
+        hooks: [{ type: 'command', command: 'node "${PLUGIN_ROOT}/dist/cli.mjs" hook pre-commit', timeout: 30 }],
+      }]);
+    });
+  });
 });
