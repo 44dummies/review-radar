@@ -27,6 +27,8 @@ export interface AnalyzeOptions {
   workingTree?: boolean;
   /** Review what a commit would record (diff against HEAD). */
   staged?: StagedMode;
+  /** Commit whose on-disk checkout the import graph is built from and cached under (default: the reviewed head). */
+  importGraphFrom?: string;
 }
 
 const abs = (root: string, p: string) => (isAbsolute(p) ? p : join(root, p));
@@ -60,7 +62,7 @@ export async function analyze(opts: AnalyzeOptions): Promise<RiskMap> {
 
   let importGraph: Context['importGraph'];
   try {
-    importGraph = await buildImportGraph(repoRoot, raw.head, { useCache: opts.useCache ?? true });
+    importGraph = await buildImportGraph(repoRoot, opts.importGraphFrom ?? raw.head, { useCache: opts.useCache ?? true });
   } catch (e) {
     warnings.push(`import graph unavailable: ${(e as Error).message}`);
     importGraph = { importedBy: () => [], importsOf: () => [] };

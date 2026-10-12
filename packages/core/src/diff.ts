@@ -92,7 +92,7 @@ export function parseUnifiedDiff(text: string): ChangedFile[] {
   return files;
 }
 
-function defaultBranch(repoRoot: string): string | undefined {
+export function defaultBranch(repoRoot: string): string | undefined {
   const originHead = tryGit(repoRoot, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])?.trim();
   if (originHead) return originHead;
   for (const b of ['main', 'master', 'origin/main', 'origin/master']) {

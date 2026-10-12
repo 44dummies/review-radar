@@ -17,4 +17,5 @@ export * from './scorer';
 export * from './analyze';
 export * from './gaming';
 export * from './trend';
+export * from './branches';
 export * from './reporters/index';
