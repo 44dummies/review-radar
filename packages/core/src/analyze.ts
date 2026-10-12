@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import type { Context, Evidence, RiskMap, Signal } from './types';
-import { getChangeSet } from './diff';
+import { getChangeSet, type StagedMode } from './diff';
 import { loadConfig, isIgnored } from './config';
 import { buildGitHistory, detectAiAuthorship } from './history';
 import { buildImportGraph } from './imports/graph';
@@ -25,6 +25,8 @@ export interface AnalyzeOptions {
   signals?: Signal[];
   /** With no range: also review uncommitted and untracked changes. */
   workingTree?: boolean;
+  /** Review what a commit would record (diff against HEAD). */
+  staged?: StagedMode;
 }
 
 const abs = (root: string, p: string) => (isAbsolute(p) ? p : join(root, p));
@@ -38,7 +40,7 @@ function readInput(root: string, p: string, kind: string): string {
 export async function analyze(opts: AnalyzeOptions): Promise<RiskMap> {
   const { repoRoot } = opts;
   const config = loadConfig(repoRoot, opts.configPath);
-  const raw = getChangeSet(repoRoot, opts.range, { workingTree: opts.workingTree });
+  const raw = getChangeSet(repoRoot, opts.range, { workingTree: opts.workingTree, staged: opts.staged });
   const warnings: string[] = [];
 
   const skippedFiles = raw.files.filter((f) => f.binary && !isIgnored(f.path, config)).map((f) => f.path);

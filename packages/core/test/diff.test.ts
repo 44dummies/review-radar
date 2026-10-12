@@ -222,3 +222,53 @@ describe('repos with no commits', () => {
     }
   });
 });
+
+describe('getChangeSet staged', () => {
+  function repo() {
+    const r = makeRepo();
+    r.write({ 'src/a.ts': 'export const a = 1;\n', 'src/b.ts': 'export const b = 1;\n', 'src/gone.ts': 'x\n' });
+    r.commit('init');
+    return r;
+  }
+  const paths = (r: ReturnType<typeof repo>, staged: 'index' | 'all') =>
+    getChangeSet(r.root, undefined, { staged }).files.map((f) => f.path).sort();
+
+  it("'index' sees only staged changes", () => {
+    const r = repo();
+    r.write({ 'src/a.ts': 'export const a = 2;\n' });
+    r.git('add', 'src/a.ts');
+    r.write({ 'src/b.ts': 'export const b = 2;\n', 'src/new.ts': 'n\n' });
+    expect(paths(r, 'index')).toEqual(['src/a.ts']);
+  });
+  it("'all' sees staged, unstaged and untracked changes", () => {
+    const r = repo();
+    r.write({ 'src/a.ts': 'export const a = 2;\n' });
+    r.git('add', 'src/a.ts');
+    r.write({ 'src/b.ts': 'export const b = 2;\n', 'src/new.ts': 'n\n' });
+    expect(paths(r, 'all')).toEqual(['src/a.ts', 'src/b.ts', 'src/new.ts']);
+  });
+  it('reports staged additions and deletions with their status', () => {
+    const r = repo();
+    r.write({ 'src/added.ts': 'a\n' });
+    r.git('add', 'src/added.ts');
+    r.git('rm', '-q', 'src/gone.ts');
+    const files = getChangeSet(r.root, undefined, { staged: 'index' }).files;
+    expect(Object.fromEntries(files.map((f) => [f.path, f.status]))).toEqual({ 'src/added.ts': 'added', 'src/gone.ts': 'deleted' });
+  });
+  it('diffs against HEAD, so base and head are both HEAD', () => {
+    const r = repo();
+    const head = r.git('rev-parse', 'HEAD');
+    const cs = getChangeSet(r.root, undefined, { staged: 'index' });
+    expect(cs).toMatchObject({ base: head, head, files: [] });
+  });
+  it('rejects a range combined with staged', () => {
+    const r = repo();
+    expect(() => getChangeSet(r.root, 'main..HEAD', { staged: 'index' })).toThrow("--staged can't be combined with a range.");
+  });
+  it('throws NO_COMMITS before the first commit', () => {
+    const r = makeRepo();
+    r.write({ 'a.ts': '1\n' });
+    r.git('add', 'a.ts');
+    expect(() => getChangeSet(r.root, undefined, { staged: 'index' })).toThrow('No commits yet: nothing to review.');
+  });
+});

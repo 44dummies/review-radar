@@ -123,9 +123,14 @@ function resolveCommit(repoRoot: string, ref: string, role: 'base' | 'head'): st
   return sha;
 }
 
+/** Changes a commit would record: 'index' = staged only (`git commit`); 'all' = every tracked edit plus untracked files (`git commit -a`, or after a chained `git add`). */
+export type StagedMode = 'index' | 'all';
+
 export interface ChangeSetOptions {
   /** With no range: diff the merge-base against the files on disk, including untracked files. */
   workingTree?: boolean;
+  /** Diff against HEAD instead of the merge-base. Wins over workingTree; can't be combined with a range. */
+  staged?: StagedMode;
 }
 
 const MAX_UNTRACKED_BYTES = 1024 * 1024; // bigger untracked files are treated like binaries
@@ -155,6 +160,13 @@ function untrackedFiles(repoRoot: string): ChangedFile[] {
 export function getChangeSet(repoRoot: string, rangeArg?: string, opts: ChangeSetOptions = {}): ChangeSet {
   if (!tryGit(repoRoot, ['rev-parse', '--is-inside-work-tree'])) {
     throw new RadarError('NOT_A_REPO', `${repoRoot} is not inside a git repository.`);
+  }
+  if (opts.staged) {
+    if (rangeArg) throw new RadarError('BAD_INPUT', "--staged can't be combined with a range.");
+    const head = headCommit(repoRoot);
+    const args = ['diff', '--no-color', '--no-ext-diff', '-U0', '-M'];
+    const files = parseUnifiedDiff(git(repoRoot, opts.staged === 'index' ? [...args, '--cached', head] : [...args, head]));
+    return { base: head, head, files: opts.staged === 'all' ? [...files, ...untrackedFiles(repoRoot)] : files };
   }
   let base: string;
   let head: string;
