@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
 import { createMcpServer } from '../src/mcp';
 import { makeRepo } from '../../core/test/helpers/repo';
+import { trendFile } from '../../core/src/trend';
 
 async function connect(cwd: string) {
   const server = createMcpServer(cwd);
@@ -82,5 +83,58 @@ describe('mcp server', () => {
     expect(badRange.isError).toBe(true);
     const ok = await client.callTool({ name: 'review_changes', arguments: {} });
     expect(ok.isError).toBeFalsy();
+  });
+  it('staged: true reviews only what git commit would record', async () => {
+    const { r } = repo();
+    r.git('add', 'src/util.ts');
+    const client = await connect(r.root);
+    const res = await client.callTool({ name: 'review_changes', arguments: { staged: true, minTier: 'P2' } });
+    expect((res.structuredContent as Payload).hunks.map((h) => h.file)).toEqual(['src/util.ts']);
+  });
+  it('staged together with a range is a tool error', async () => {
+    const client = await connect(repo().r.root);
+    const res = await client.callTool({ name: 'review_changes', arguments: { staged: true, range: 'main..HEAD' } });
+    expect(res.isError).toBe(true);
+    expect(text(res)).toContain("can't be combined with a range");
+  });
+  it('reports a trend from the second working-tree run', async () => {
+    const client = await connect(repo().r.root);
+    const first = await client.callTool({ name: 'review_changes', arguments: {} });
+    expect((first.structuredContent as { trend?: unknown }).trend).toBeUndefined();
+    const second = await client.callTool({ name: 'review_changes', arguments: {} });
+    const trend = (second.structuredContent as { trend?: { line: string; firstToday?: { p0: number } } }).trend;
+    expect(trend?.line).toMatch(/^P0 1 → 1 · P1 \d+ → \d+ since \d\d:\d\d \(2 runs today\)$/);
+    expect(trend?.firstToday?.p0).toBe(1);
+    expect(text(second)).toContain(`Trend: ${trend!.line}`);
+  });
+  it('a range review records no trend', async () => {
+    const { r, base } = repo();
+    r.commit('work');
+    const client = await connect(r.root);
+    await client.callTool({ name: 'review_changes', arguments: { range: `${base}..HEAD` } });
+    expect(existsSync(trendFile(r.root))).toBe(false);
+  });
+  it('says "Nothing to review" for an empty diff', async () => {
+    const r = makeRepo();
+    r.write({ 'a.ts': '1\n' });
+    r.commit('init');
+    const client = await connect(r.root);
+    const res = await client.callTool({ name: 'review_changes', arguments: {} });
+    expect(res.isError).toBeFalsy();
+    expect(text(res)).toBe('Nothing to review: no changes in the working tree and branch.');
+    expect((res.structuredContent as { summary: { hunks: number } }).summary.hunks).toBe(0);
+    const staged = await client.callTool({ name: 'review_changes', arguments: { staged: true } });
+    expect(text(staged)).toBe('Nothing to review: no changes in staged changes.');
+  });
+  it('treats a repo with no commits as nothing to review', async () => {
+    const r = makeRepo();
+    r.write({ 'a.ts': '1\n' });
+    const client = await connect(r.root);
+    const res = await client.callTool({ name: 'review_changes', arguments: {} });
+    expect(res.isError).toBeFalsy();
+    expect(text(res)).toBe('No commits yet: nothing to review.');
+    expect((res.structuredContent as { hunks: unknown[] }).hunks).toEqual([]);
+    const guide = await client.callTool({ name: 'pr_review_guide', arguments: {} });
+    expect(text(guide)).toBe('No commits yet: nothing to review.');
   });
 });
