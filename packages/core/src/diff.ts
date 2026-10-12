@@ -101,12 +101,23 @@ function defaultBranch(repoRoot: string): string | undefined {
   return undefined;
 }
 
+/** Checkout advice that only makes sense inside GitHub Actions. */
+export function ciHint(): string {
+  return process.env.GITHUB_ACTIONS === 'true' ? ' In GitHub Actions use actions/checkout with fetch-depth: 0.' : '';
+}
+
+function headCommit(repoRoot: string): string {
+  const sha = tryGit(repoRoot, ['rev-parse', '--verify', '--quiet', 'HEAD^{commit}'])?.trim();
+  if (!sha) throw new RadarError('NO_COMMITS', 'No commits yet: nothing to review.');
+  return sha;
+}
+
 function resolveCommit(repoRoot: string, ref: string, role: 'base' | 'head'): string {
   const sha = tryGit(repoRoot, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`])?.trim();
   if (!sha) {
     throw new RadarError(
       role === 'base' ? 'BASE_NOT_FOUND' : 'BAD_INPUT',
-      `Cannot find ${role} commit "${ref}". In GitHub Actions use actions/checkout with fetch-depth: 0.`,
+      `Cannot find ${role} commit "${ref}".${ciHint()}`,
     );
   }
   return sha;
@@ -155,15 +166,15 @@ export function getChangeSet(repoRoot: string, rangeArg?: string, opts: ChangeSe
     if (rangeArg.includes('...')) {
       // git's A...B: diff from the merge-base, so later commits on A don't show up as reversed changes
       const mb = tryGit(repoRoot, ['merge-base', base, head])?.trim();
-      if (!mb) throw new RadarError('BASE_NOT_FOUND', `No merge-base for ${rangeArg}. In GitHub Actions use actions/checkout with fetch-depth: 0.`);
+      if (!mb) throw new RadarError('BASE_NOT_FOUND', `No merge-base for ${rangeArg}.${ciHint()}`);
       base = mb;
     }
   } else {
-    head = resolveCommit(repoRoot, 'HEAD', 'head');
+    head = headCommit(repoRoot);
     const branch = defaultBranch(repoRoot);
-    if (!branch) throw new RadarError('BASE_NOT_FOUND', 'No default branch found. Pass an explicit range like main..HEAD. In GitHub Actions use fetch-depth: 0.');
+    if (!branch) throw new RadarError('BASE_NOT_FOUND', `No default branch found. Pass an explicit range like main..HEAD.${ciHint()}`);
     const mb = tryGit(repoRoot, ['merge-base', branch, head])?.trim();
-    if (!mb) throw new RadarError('BASE_NOT_FOUND', `No merge-base between ${branch} and HEAD. In GitHub Actions use actions/checkout with fetch-depth: 0.`);
+    if (!mb) throw new RadarError('BASE_NOT_FOUND', `No merge-base between ${branch} and HEAD.${ciHint()}`);
     base = mb;
   }
   if (!rangeArg && opts.workingTree) {

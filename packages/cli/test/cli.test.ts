@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { main } from '../src/cli';
 import { makeRepo } from '../../core/test/helpers/repo';
 
@@ -54,10 +54,12 @@ describe('cli', () => {
     expect(JSON.parse(readFileSync(`${r.root}/rr.sarif`, 'utf8')).version).toBe('2.1.0');
   });
   it('exits 2 with a helpful message on a bad base', async () => {
+    vi.stubEnv('GITHUB_ACTIONS', 'true');
     const { r } = fixture();
     const res = await run(['nope..HEAD'], r.root);
     expect(res.code).toBe(2);
     expect(res.err).toContain('fetch-depth: 0');
+    vi.unstubAllEnvs();
   });
   it('exits 2 on unknown format or flag', async () => {
     const { r } = fixture();
