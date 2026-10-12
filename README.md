@@ -66,6 +66,8 @@ npx review-radar main...HEAD        # PR-style range, from the merge-base
 npx review-radar --format md        # terminal | md | json | sarif
 npx review-radar --fail-on P0       # exit 1 if anything must be read
 npx review-radar --working-tree     # include uncommitted and untracked changes
+npx review-radar --staged           # only what `git commit` would record
+npx review-radar branches           # rank open branches and worktrees by review need
 npx review-radar mcp                # MCP server (stdio) for coding agents
 ```
 
@@ -83,7 +85,21 @@ Let your agent check *where a reviewer will look* before it opens the PR. It rev
 
 On Claude Code older than 2.1.275, run `/plugin marketplace add 44dummies/review-radar`, then `/plugin install review-radar@review-radar`. The plugin's MCP server needs Node 20 or newer on your `PATH`.
 
-The `review-before-pr` skill runs the review, makes the agent undo its own test gaming (skipped or weakened tests), and adds a **Where to look** section to the PR description. Claude usually picks it up on its own when you ask it to get a branch ready for a PR; you can also run `/review-radar:review-before-pr`.
+The plugin gives Claude three skills and a commit hook:
+
+| | What it does |
+|---|---|
+| `/review-radar:review [quick\|commit\|<range>]` | Ranks what you just changed and undoes the agent's own test gaming. `quick` lists P0s only, `commit` reviews staged changes. Claude runs it on its own after finishing a task or before committing. |
+| `/review-radar:today` | Ranks your open branches and worktrees by P0 hunks, so you know where to start. |
+| `/review-radar:review-before-pr` | The PR gate: undoes test gaming, checks each P0 for a covering test (asks before adding one), and writes the **Where to look** section. Claude picks it up on its own when you ask it to get a branch ready for a PR. |
+| Commit hook | When Claude runs `git commit`, Review Radar checks the commit for skipped or weakened tests and warns the agent. Set `agentHooks.preCommit: block` to stop the commit instead, or `off`. It never fails a commit on its own errors. |
+
+Each review of your working tree or staged changes adds a line to `.git/review-radar/trend.jsonl` (per worktree, never committed), so the tool can say `P0 3 → 1 since 09:12 (4 runs today)`. CI runs never write it.
+
+**Limits:**
+- The commit hook checks only what `git commit --amend` newly stages.
+- When a command runs `git add` before `git commit`, the hook checks every uncommitted change, since it runs before `git add` does.
+- `today` counts importers for branches that aren't checked out using your current checkout.
 
 > In our end-to-end runs, an agent's branch "passed" because it had skipped one test and loosened an exact assertion to `assert.ok`, hiding a bug where a negative discount raised the price. With the plugin installed, Claude ran the review, restored both tests, fixed the bug they hid, and re-checked before writing the PR description.
 
@@ -105,6 +121,7 @@ args = ["-y", "review-radar", "mcp"]
 |---|---|
 | `review_changes` | Ranked hunks with tier, score, `file:lines` and evidence (structured), plus the terminal report |
 | `pr_review_guide` | A markdown **Where to look** section for the PR description |
+| `review_branches` | Open branches and worktrees ranked by P0/P1 hunks, each with its riskiest hunk and today's trend |
 
 ## 👀 What you get on a PR
 
@@ -187,6 +204,8 @@ weights:
 tiers: { p0: 70, p1: 40 }
 sensitivePaths: ["ledger", "kyc"]
 ignore: ["**/generated/**", "**/*.snap"]
+agentHooks:
+  preCommit: warn         # warn | block | off  (Claude Code commit hook)
 ```
 
 A hunk's score is `min(100, sum of its evidence weights)`. Tiers: **P0 ≥ 70**, **P1 ≥ 40**, **P2** below.
@@ -243,6 +262,7 @@ Each signal is one small, self-contained file in [`packages/core/src/signals`](p
 
 - [x] CLI + GitHub Action, 9 signals, SARIF in and out
 - [x] **MCP server + Claude Code plugin**, so agents see where a reviewer will look *before* they open the PR
+- [x] Daily use in Claude Code: `review` / `today` skills, a test-gaming commit hook, and a per-day trend
 - [ ] More import-graph languages: Go, Java, Rust
 - [ ] Co-change coupling from git history
 - [ ] Optional LLM explainer for P0 hunks only

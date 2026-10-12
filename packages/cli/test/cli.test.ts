@@ -68,7 +68,7 @@ describe('cli', () => {
   });
   it('prints version and help', async () => {
     const { r } = fixture();
-    expect((await run(['--version'], r.root)).out.trim()).toBe('1.1.0');
+    expect((await run(['--version'], r.root)).out.trim()).toBe('1.2.0');
     expect((await run(['--help'], r.root)).out).toContain('Usage: review-radar');
   });
   it('--staged reviews only staged changes', async () => {
