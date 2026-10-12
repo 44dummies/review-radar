@@ -40,7 +40,8 @@ describe('rankBranches', () => {
   });
 });
 
-describe('reviewBranches', () => {
+// Each case spawns ~25 git processes and up to three full analyses: slow on Windows runners under a parallel suite.
+describe('reviewBranches', { timeout: 60_000 }, () => {
   it('ranks unmerged branches and worktrees with uncommitted work', async () => {
     const { r, wt } = setup();
     recordRun(wt, { p0: 2, p1: 0, p2: 0, estMinutes: 1 }, 'worktree');
