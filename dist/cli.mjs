@@ -1685,7 +1685,7 @@ var require_log = __commonJS({
       if (logLevel === "debug")
         console.log(...messages);
     }
-    function warn(logLevel, warning) {
+    function warn2(logLevel, warning) {
       if (logLevel === "debug" || logLevel === "warn") {
         if (typeof node_process.emitWarning === "function")
           node_process.emitWarning(warning);
@@ -1694,7 +1694,7 @@ var require_log = __commonJS({
       }
     }
     exports.debug = debug;
-    exports.warn = warn;
+    exports.warn = warn2;
   }
 });
 
@@ -8080,8 +8080,8 @@ var require_parse = __commonJS({
       }
       return value.replace(/\\(.)/g, "$1");
     };
-    var hasRepeatedCharPrefixOverlap = (branches) => {
-      const values = branches.map(normalizeSimpleBranch).filter(Boolean);
+    var hasRepeatedCharPrefixOverlap = (branches2) => {
+      const values = branches2.map(normalizeSimpleBranch).filter(Boolean);
       for (let i2 = 0; i2 < values.length; i2++) {
         for (let j = i2 + 1; j < values.length; j++) {
           const a = values[i2];
@@ -8164,11 +8164,11 @@ var require_parse = __commonJS({
         if (!match || match.type !== "*") {
           return;
         }
-        const branches = splitTopLevel(match.body).map((branch2) => branch2.trim());
-        if (branches.length !== 1) {
+        const branches2 = splitTopLevel(match.body).map((branch2) => branch2.trim());
+        if (branches2.length !== 1) {
           return;
         }
-        const branch = normalizeSimpleBranch(branches[0]);
+        const branch = normalizeSimpleBranch(branches2[0]);
         if (!branch || branch.length !== 1) {
           return;
         }
@@ -8196,16 +8196,16 @@ var require_parse = __commonJS({
         return { risky: false };
       }
       const max = typeof options.maxExtglobRecursion === "number" ? options.maxExtglobRecursion : constants.DEFAULT_MAX_EXTGLOB_RECURSION;
-      const branches = splitTopLevel(body2).map((branch) => branch.trim());
-      if (branches.length > 1) {
-        if (branches.some((branch) => branch === "") || branches.some((branch) => /^[*?]+$/.test(branch)) || hasRepeatedCharPrefixOverlap(branches)) {
+      const branches2 = splitTopLevel(body2).map((branch) => branch.trim());
+      if (branches2.length > 1) {
+        if (branches2.some((branch) => branch === "") || branches2.some((branch) => /^[*?]+$/.test(branch)) || hasRepeatedCharPrefixOverlap(branches2)) {
           return { risky: true };
         }
       }
       const safeChars = [];
       let sawStarSequence = false;
       let combinable = true;
-      for (const branch of branches) {
+      for (const branch of branches2) {
         const chars = getStarExtglobSequenceChars(branch);
         if (chars) {
           sawStarSequence = true;
@@ -9569,9 +9569,9 @@ function loadConfig(repoRoot2, configPath) {
     throw new RadarError("BAD_INPUT", `Invalid YAML in ${p}: ${e.message}`);
   }
   const d = structuredClone(DEFAULT_CONFIG);
-  const preCommit = raw.agentHooks?.preCommit ?? d.agentHooks.preCommit;
-  if (!PRE_COMMIT_MODES.includes(preCommit)) {
-    throw new RadarError("BAD_INPUT", `agentHooks.preCommit must be warn, block or off (got "${String(preCommit)}") in ${p}`);
+  const preCommit2 = raw.agentHooks?.preCommit ?? d.agentHooks.preCommit;
+  if (!PRE_COMMIT_MODES.includes(preCommit2)) {
+    throw new RadarError("BAD_INPUT", `agentHooks.preCommit must be warn, block or off (got "${String(preCommit2)}") in ${p}`);
   }
   return {
     weights: { ...d.weights, ...raw.weights ?? {} },
@@ -9581,7 +9581,7 @@ function loadConfig(repoRoot2, configPath) {
     ignore: [...d.ignore, ...raw.ignore ?? []],
     churnDays: raw.churnDays ?? d.churnDays,
     diffusion: { ...d.diffusion, ...raw.diffusion ?? {} },
-    agentHooks: { preCommit }
+    agentHooks: { preCommit: preCommit2 }
   };
 }
 var matcherCache = /* @__PURE__ */ new WeakMap();
@@ -14367,6 +14367,29 @@ async function analyze(opts) {
   }
   const risks = scoreHunks(hunks, evidence, config2);
   return { changeSet, hunks: risks, summary: summarize(risks, skippedFiles), meta: { version: VERSION, warnings, aiAuthored } };
+}
+
+// packages/core/src/gaming.ts
+function findTestGaming(repoRoot2, staged, config2 = loadConfig(repoRoot2)) {
+  const raw = getChangeSet(repoRoot2, void 0, { staged });
+  const changeSet = { ...raw, files: raw.files.filter((f) => !f.binary && !isIgnored(f.path, config2)) };
+  const ctx = {
+    repoRoot: repoRoot2,
+    changeSet,
+    config: config2,
+    sarif: [],
+    testFiles: [],
+    importGraph: { importedBy: () => [], importsOf: () => [] },
+    git: { churn: () => 0, shallow: false },
+    readFile: () => void 0
+  };
+  const hunks = new Map(changeSet.files.flatMap((f) => f.hunks).map((h) => [h.id, h]));
+  return testGamingSignal.run(ctx).flatMap((e) => {
+    const h = hunks.get(e.hunkId);
+    if (!h) return [];
+    const r = h.newRange.start ? h.newRange : h.oldRange;
+    return [{ file: h.file, startLine: r.start, endLine: r.end, ruleId: e.ruleId ?? e.signal, message: e.message }];
+  });
 }
 
 // packages/core/src/trend.ts
@@ -19367,10 +19390,10 @@ function foldIntersection(json) {
     if (Object.keys(union2).length !== 1)
       return;
     const rest = allOf.filter((m) => m !== union2);
-    const branches = union2[keyword].map((branch) => foldObjects([...rest, branch]));
-    if (branches.some((b) => !b))
+    const branches2 = union2[keyword].map((branch) => foldObjects([...rest, branch]));
+    if (branches2.some((b) => !b))
       return;
-    folded = { [keyword]: branches };
+    folded = { [keyword]: branches2 };
   }
   if (!folded)
     return;
@@ -20082,11 +20105,11 @@ function stringifyKeyNames(bySchema, json, visited) {
     return inlined === def ? json : inlined;
   }
   for (const keyword of ["anyOf", "oneOf"]) {
-    const branches = json[keyword];
-    if (!Array.isArray(branches))
+    const branches2 = json[keyword];
+    if (!Array.isArray(branches2))
       continue;
-    const mapped = branches.map((branch) => stringifyKeyNames(bySchema, branch, visited));
-    if (mapped.some((branch, i2) => branch !== branches[i2]))
+    const mapped = branches2.map((branch) => stringifyKeyNames(bySchema, branch, visited));
+    if (mapped.some((branch, i2) => branch !== branches2[i2]))
       json = { ...json, [keyword]: mapped };
   }
   const types = Array.isArray(json.type) ? json.type : [json.type];
@@ -25445,8 +25468,8 @@ function scanXMcpHeaderDeclarations(inputSchema2) {
     for (const k of NON_REACHABLE_SUBSCHEMA_KEYWORDS) {
       const sub = schema[k];
       if (sub === void 0) continue;
-      const branches = Array.isArray(sub) ? sub : sub !== null && typeof sub === "object" && OBJECT_VALUED_SUBSCHEMA_KEYWORDS.has(k) ? Object.values(sub) : [sub];
-      for (const branch of branches) {
+      const branches2 = Array.isArray(sub) ? sub : sub !== null && typeof sub === "object" && OBJECT_VALUED_SUBSCHEMA_KEYWORDS.has(k) ? Object.values(sub) : [sub];
+      for (const branch of branches2) {
         const fault$1 = visit(branch, [...path, `<${k}>`], false);
         if (fault$1 !== void 0) return fault$1;
       }
@@ -31660,7 +31683,7 @@ var require_contains = /* @__PURE__ */ __commonJSMin(((exports) => {
         const count = gen.let("count", 0);
         validateItems(schValid, () => gen.if(schValid, () => checkLimits(count)));
       }
-      function validateItems(_valid, block) {
+      function validateItems(_valid, block2) {
         gen.forRange("i", 0, len, (i2) => {
           cxt.subschema({
             keyword: "contains",
@@ -31668,7 +31691,7 @@ var require_contains = /* @__PURE__ */ __commonJSMin(((exports) => {
             dataPropType: util_1.Type.Num,
             compositeRule: true
           }, _valid);
-          block();
+          block2();
         });
       }
       function checkLimits(count) {
@@ -36365,9 +36388,68 @@ function startStdio(cwd) {
   return serveStdio(() => createMcpServer(cwd));
 }
 
+// packages/cli/src/hook.ts
+var QUOTED = /"(?:\\.|[^"\\])*"|'[^']*'/g;
+var COMMIT = /\bgit\b[^;&|\n]*?\scommit\b/;
+var STAGES_FIRST = /\bgit\b[^;&|\n]*?\s(?:add|rm|mv)\b/;
+function stagedModeFor(command) {
+  const plain = command.replace(QUOTED, '""');
+  if (STAGES_FIRST.test(plain)) return "all";
+  const m = COMMIT.exec(plain);
+  if (!m) return "index";
+  const args2 = plain.slice(m.index + m[0].length).split(/&&|\|\||[;|\n]/)[0].split(/\s+/);
+  return args2.some((t) => t === "--all" || /^-[A-Za-z]+$/.test(t) && t.includes("a")) ? "all" : "index";
+}
+var where = (f) => f.startLine === f.endLine ? `${f.file}:${f.startLine}` : `${f.file}:${f.startLine}-${f.endLine}`;
+var bullets = (fs2) => fs2.map((f) => `- ${where(f)} \u2014 ${f.message}`).join("\n");
+function warn(fs2) {
+  const first = fs2[0];
+  return {
+    systemMessage: `Review Radar: this commit adds test gaming (${fs2.length} finding${fs2.length === 1 ? "" : "s"}) \u2014 ${first.file}:${first.startLine} ${first.message}`,
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      additionalContext: `Review Radar found test gaming in the changes being committed:
+${bullets(fs2)}
+Undo it (restore the test or the strict assertion) and fix the code under test, unless the user explicitly asked for it.`
+    }
+  };
+}
+function block(fs2) {
+  return {
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: `Review Radar blocked this commit: it adds test gaming.
+${bullets(fs2)}
+Undo it and fix the code under test. (Set agentHooks.preCommit: warn in .reviewradar.yml to allow.)`
+    }
+  };
+}
+function preCommit(stdin, io) {
+  try {
+    const input = JSON.parse(stdin);
+    const command = input.tool_input?.command;
+    if (typeof command !== "string" || typeof input.cwd !== "string") return;
+    if (!COMMIT.test(command.replace(QUOTED, '""'))) return;
+    const root = tryGit(input.cwd, ["rev-parse", "--show-toplevel"])?.trim();
+    if (!root) return;
+    const config2 = loadConfig(root);
+    if (config2.agentHooks.preCommit === "off") return;
+    const findings = findTestGaming(root, stagedModeFor(command), config2);
+    if (findings.length === 0) return;
+    io.stdout(`${JSON.stringify(config2.agentHooks.preCommit === "block" ? block(findings) : warn(findings))}
+`);
+  } catch {
+  }
+}
+
 // packages/cli/src/cli.ts
 var HELP = `Usage: review-radar [<base>...<head>] [options]
+       review-radar branches [--limit n] [--format terminal|json]
+                                 Rank open branches and worktrees by what needs review
        review-radar mcp          Start the MCP server (stdio) for coding agents
+       review-radar hook pre-commit
+                                 Claude Code PreToolUse hook: reads the hook JSON on stdin
 
 Shows which hunks of a change need human review, and why.
 With no range: current branch vs the merge-base with main. base...head diffs from
@@ -36381,6 +36463,7 @@ Options:
   --fail-on <tier>   Exit 1 if any hunk is at or above P0 | P1
   --config <file>    Config file (default: .reviewradar.yml)
   --working-tree     Also review uncommitted and untracked changes (no-range mode)
+  --staged           Review only staged changes (what git commit would record)
   --no-cache         Rebuild the import graph
   --no-color         Disable colors
   -v, --version      Print version
@@ -36394,9 +36477,57 @@ function isMainModule(metaUrl, argv1) {
     return false;
   }
 }
+function fail(e, io) {
+  if (e instanceof RadarError && e.code === "NO_COMMITS") {
+    io.stdout(`${e.message}
+`);
+    return 0;
+  }
+  const msg = e instanceof RadarError ? e.message : e.stack ?? String(e);
+  io.stderr(`review-radar: ${msg}
+`);
+  return 2;
+}
+async function branches(argv, io) {
+  let v;
+  try {
+    v = parseArgs({ args: argv, strict: true, options: { limit: { type: "string" }, format: { type: "string", default: "terminal" } } }).values;
+  } catch (e) {
+    io.stderr(`review-radar: ${e.message}
+`);
+    return 2;
+  }
+  const limit = v.limit === void 0 ? 20 : Number(v.limit);
+  if (!Number.isInteger(limit) || limit < 1) {
+    io.stderr("review-radar: --limit must be a positive integer\n");
+    return 2;
+  }
+  if (v.format !== "terminal" && v.format !== "json") {
+    io.stderr("review-radar: branches --format must be terminal or json\n");
+    return 2;
+  }
+  try {
+    const res = await reviewBranches(io.cwd, { limit });
+    io.stdout(v.format === "json" ? `${JSON.stringify(res, null, 2)}
+` : renderBranches(res));
+    return 0;
+  } catch (e) {
+    return fail(e, io);
+  }
+}
 async function main(argv, io) {
   if (argv[0] === "mcp") {
     startStdio(io.cwd);
+    return 0;
+  }
+  if (argv[0] === "branches") return branches(argv.slice(1), io);
+  if (argv[0] === "hook") {
+    if (argv[1] !== "pre-commit") {
+      io.stderr(`review-radar: unknown hook "${argv[1] ?? ""}" (use pre-commit)
+`);
+      return 2;
+    }
+    preCommit(io.stdin ? await io.stdin() : "", io);
     return 0;
   }
   let parsed;
@@ -36414,6 +36545,7 @@ async function main(argv, io) {
         config: { type: "string" },
         "no-cache": { type: "boolean" },
         "working-tree": { type: "boolean" },
+        staged: { type: "boolean" },
         "no-color": { type: "boolean" },
         version: { type: "boolean", short: "v" },
         help: { type: "boolean", short: "h" }
@@ -36446,6 +36578,10 @@ ${HELP}`);
     io.stderr("review-radar: --fail-on must be P0 or P1\n");
     return 2;
   }
+  if (v.staged && (positionals[0] || v["working-tree"])) {
+    io.stderr("review-radar: --staged can't be combined with a range or --working-tree\n");
+    return 2;
+  }
   try {
     const map = await analyze({
       repoRoot: io.cwd,
@@ -36454,7 +36590,8 @@ ${HELP}`);
       lcovPath: v.lcov,
       configPath: v.config,
       useCache: !v["no-cache"],
-      workingTree: v["working-tree"]
+      workingTree: v["working-tree"],
+      staged: v.staged ? "index" : void 0
     });
     const text = render(map, format, { color: !v["no-color"] && !v.out });
     if (v.out) writeFileSync3(isAbsolute5(v.out) ? v.out : join7(io.cwd, v.out), text);
@@ -36463,17 +36600,22 @@ ${HELP}`);
     if (failOn === "P1" && map.summary.p0 + map.summary.p1 > 0) return 1;
     return 0;
   } catch (e) {
-    const msg = e instanceof RadarError ? e.message : e.stack ?? String(e);
-    io.stderr(`review-radar: ${msg}
-`);
-    return 2;
+    return fail(e, io);
   }
 }
 if (isMainModule(import.meta.url, process.argv[1])) {
   main(process.argv.slice(2), {
     stdout: (s) => process.stdout.write(s),
     stderr: (s) => process.stderr.write(s),
-    cwd: process.cwd()
+    cwd: process.cwd(),
+    stdin: () => new Promise((done) => {
+      if (process.stdin.isTTY) return done("");
+      let s = "";
+      process.stdin.setEncoding("utf8");
+      process.stdin.on("data", (c) => s += c);
+      process.stdin.on("end", () => done(s));
+      process.stdin.on("error", () => done(s));
+    })
   }).then((code) => {
     process.exitCode = code;
   });

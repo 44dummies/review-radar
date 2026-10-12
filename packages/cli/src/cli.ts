@@ -5,6 +5,7 @@ import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyze, render, renderBranches, reviewBranches, FORMATS, RadarError, VERSION, type Format } from '@review-radar/core';
 import { startStdio } from './mcp';
+import { preCommit } from './hook';
 
 const HELP = `Usage: review-radar [<base>...<head>] [options]
        review-radar branches [--limit n] [--format terminal|json]
@@ -42,7 +43,7 @@ export function isMainModule(metaUrl: string, argv1: string | undefined): boolea
   }
 }
 
-interface IO { stdout: (s: string) => void; stderr: (s: string) => void; cwd: string }
+interface IO { stdout: (s: string) => void; stderr: (s: string) => void; cwd: string; stdin?: () => Promise<string> }
 
 function fail(e: unknown, io: IO): number {
   if (e instanceof RadarError && e.code === 'NO_COMMITS') { io.stdout(`${e.message}\n`); return 0; }
@@ -74,6 +75,11 @@ async function branches(argv: string[], io: IO): Promise<number> {
 export async function main(argv: string[], io: IO): Promise<number> {
   if (argv[0] === 'mcp') { startStdio(io.cwd); return 0; }
   if (argv[0] === 'branches') return branches(argv.slice(1), io);
+  if (argv[0] === 'hook') {
+    if (argv[1] !== 'pre-commit') { io.stderr(`review-radar: unknown hook "${argv[1] ?? ''}" (use pre-commit)\n`); return 2; }
+    preCommit(io.stdin ? await io.stdin() : '', io);
+    return 0;
+  }
   let parsed;
   try {
     parsed = parseArgs({
@@ -121,5 +127,13 @@ export async function main(argv: string[], io: IO): Promise<number> {
 if (isMainModule(import.meta.url, process.argv[1])) {
   main(process.argv.slice(2), {
     stdout: (s) => process.stdout.write(s), stderr: (s) => process.stderr.write(s), cwd: process.cwd(),
+    stdin: () => new Promise<string>((done) => {
+      if (process.stdin.isTTY) return done('');
+      let s = '';
+      process.stdin.setEncoding('utf8');
+      process.stdin.on('data', (c) => (s += c));
+      process.stdin.on('end', () => done(s));
+      process.stdin.on('error', () => done(s));
+    }),
   }).then((code) => { process.exitCode = code; });
 }
