@@ -94,6 +94,8 @@ The plugin gives Claude three skills and a commit hook:
 | `/review-radar:review-before-pr` | The PR gate: undoes test gaming, checks each P0 for a covering test (asks before adding one), and writes the **Where to look** section. Claude picks it up on its own when you ask it to get a branch ready for a PR. |
 | Commit hook | When Claude runs `git commit`, Review Radar checks the commit for skipped or weakened tests and warns the agent. Set `agentHooks.preCommit: block` to stop the commit instead, or `off`. It never fails a commit on its own errors. |
 
+<p align="center"><img src=".github/assets/hook-demo.svg" alt="Claude Code with the Review Radar commit hook refusing a commit that skips a test; the agent asks instead of weakening the config" width="820"></p>
+
 Each review of your working tree or staged changes adds a line to `.git/review-radar/trend.jsonl` (per worktree, never committed), so the tool can say `P0 3 → 1 since 09:12 (4 runs today)`. CI runs never write it.
 
 **Limits:**
